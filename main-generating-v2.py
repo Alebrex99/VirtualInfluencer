@@ -11,13 +11,11 @@ from google.genai.types import GenerateContentConfig, Modality
 from constants import *
 
 """
-CHICAGO FACE DATASET:
-"""
-
-
-"""GOOGLE API NANO BANANA PIPELINE:
+GOOGLE API NANO BANANA PIPELINE: 
+2.5 FLASH IMAGE PREVIEW
     - $0.039 per immagine
     - Le immagini di output fino a 1024 x 1024 px consumano 1290 token e corrispondono a 0,039 $per immagine.
+    - Per impostazione predefinita, il modello abbina le dimensioni dell'immagine di output a quelle dell'immagine di input oppure genera quadrati 1:1.
     *
     Five anthropomorphism levels (imported from constants.py via LEVELS):
         "high"        → Level 1: Highly polished photorealism, studio retouching
@@ -102,7 +100,7 @@ def build_prompt(level: str) -> str:
         "but apply the following specific artistic style: "
     """
     shared_prompt = (
-        "Transform the provided photograph of  while strictly maintaining the original pose, framing, "
+        "Transform the input image while strictly maintaining the original pose, framing, "
         "lighting, and overall composition. "
         "CRITICAL: Strictly maintain the original human anatomical proportions. Do NOT enlarge the eyes or exaggerate features. "
         "Do not alter the underlying subject's gender or age, "

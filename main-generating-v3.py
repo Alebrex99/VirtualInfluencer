@@ -1,8 +1,9 @@
 import os
 import time
+import tempfile
 from google import genai
 from google.genai import types
-from PIL import Image, UnidentifiedImageError
+from PIL import Image, ImageOps, UnidentifiedImageError
 from pathlib import Path
 from dotenv import load_dotenv
 import io
@@ -11,11 +12,19 @@ from google.genai.types import GenerateContentConfig, Modality
 from constants import *
 
 """
-GOOGLE API NANO BANANA PIPELINE: 
-2.5 FLASH IMAGE PREVIEW
+LONDON SET
+    - 1350x1350 px, 1:1 aspect ratio, 5 levels of anthropomorphism
+CHICAGO FACE DATASET:
+    - 2444x1718 px, 3:2 aspect ratio, 5 levels of anthropomorphism
+MultiRacialDataset: 
+    - 2444x1718 -> aspect ratio 3:2
+FACES Dataset: 
+    - 2835x3543 -> aspect ratio 4:5
+"""
+
+"""GOOGLE API NANO BANANA PIPELINE:
     - $0.039 per immagine
     - Le immagini di output fino a 1024 x 1024 px consumano 1290 token e corrispondono a 0,039 $per immagine.
-    - Per impostazione predefinita, il modello abbina le dimensioni dell'immagine di output a quelle dell'immagine di input oppure genera quadrati 1:1.
     *
     Five anthropomorphism levels (imported from constants.py via LEVELS):
         "high"        → Level 1: Highly polished photorealism, studio retouching
@@ -92,19 +101,12 @@ def build_prompt(level: str) -> str:
     element should integrate].
     """
 
-    """SHARED PROMPT FUNZIONANTE OLD
-        "Transform the input image while strictly maintaining the original pose, framing, "
-        "lighting, and overall composition. "
-        "CRITICAL: Strictly maintain the original human anatomical proportions. Do NOT enlarge the eyes or exaggerate features. "
-        "Do not alter the underlying subject's gender or age, "
-        "but apply the following specific artistic style: "
-    """
     shared_prompt = (
-        "Transform the provided photograph of  while strictly maintaining the original pose, framing, "
-        "lighting, and overall composition. "
-        "CRITICAL: Strictly maintain the original human anatomical proportions. Do NOT enlarge the eyes or exaggerate features. "
-        "Do not alter the underlying subject's gender or age, "
-        "but apply the following specific artistic style: "
+        "Transform the provided photograph of a person into the following artistic style (Style), "
+        "preserve strictly the original composition, pose, lighting, and framing."
+        "Preserve strictly the original human anatomical proportions of all facial features and hair." 
+        "Ensure Do NOT exaggerate features. Do not alter the subject's gender or age."
+        "Apply the following specific artistic style: "
     )
     
     # ── Level 1 — High (Polished Photorealism) ──────────────────────────────
@@ -173,7 +175,7 @@ def build_prompt(level: str) -> str:
 # API CALLS
 # ──────────────────────────────────────────────
 
-def generate_with_retry(client, model, image_path, prompt):
+def generate_with_retry(client, model, image_path, prompt, aspect_ratio, style_reference_image=None):
     """
     Call the API and return raw image bytes.
     Retries up to MAX_RETRIES times with exponential back-off.
@@ -192,11 +194,21 @@ def generate_with_retry(client, model, image_path, prompt):
         try:
             # Direct image input using PIL.Image (no byte conversion for input)
             with Image.open(image_path) as input_image:
+                contents = [prompt]
+                
+                if style_reference_image is not None:
+                    with Image.open(style_reference_image) as style_image:
+                        contents.append(style_image.copy())
+                
+                contents.append(input_image)
                 response = client.models.generate_content(
                     model=model,
-                    contents=[prompt, input_image],
+                    contents=contents,
                     config=GenerateContentConfig(
-                        response_modalities=[Modality.TEXT, Modality.IMAGE]) #image_config= types.ImageConfig(        )
+                        response_modalities=[Modality.TEXT, Modality.IMAGE],
+                        image_config= types.ImageConfig(
+                            aspect_ratio=aspect_ratio
+                        ))
                 )
             
             # DEBUG =====================================
@@ -232,64 +244,6 @@ def generate_with_retry(client, model, image_path, prompt):
     raise RuntimeError(f"Generation failed for {image_path.name}: {last_error}")
 
 
-def extract_generated_pil_image(response):
-    """
-    return part.inline_data.data:
-    inline_data = {
-        "mimeType": string,
-        "data": string
-    }
-
-    for part in response.parts:
-        if part.text is not None:
-            print(part.text)
-        elif part.inline_data is not None:
-            image = part.as_image()
-            image.save("generated_image.png")
-    """
-
-    # ----------------TEMPORARY DEBUG ---------------------
-    print("=== RAW RESPONSE ===")
-    print("text:", getattr(response, "text", "NO TEXT ATTR"))
-    print("parts:", getattr(response, "parts", "NO PARTS ATTR"))
-    print("candidates:", getattr(response, "candidates", "NO CANDIDATES ATTR"))
-    if hasattr(response, "candidates") and response.candidates:
-        for i, c in enumerate(response.candidates):
-            print(f"  candidate[{i}].content:", getattr(c, "content", None))
-            content = getattr(c, "content", None)
-            if content:
-                print(f"  candidate[{i}].content.parts:", getattr(content, "parts", None))
-    print("=== END DEBUG ===")
-    # ------------------------ END DEBUG ---------------------------
-
-    # 1) response.parts
-    if hasattr(response, "parts") and response.parts:
-        for part in response.parts:
-            if getattr(part, "text", None) is not None:
-                print(part.text)
-            if getattr(part, "inline_data", None):
-                if hasattr(part, "as_image"):
-                    return part.as_image() # Problema: part.as_image() non restituisce una PIL Image, ma un oggetto Gemini-interno.
-                if part.inline_data.data:
-                    return Image.open(io.BytesIO(part.inline_data.data)).convert("RGB")
-
-    # 2) response.candidates[*].content.parts[*]
-    if hasattr(response, "candidates") and response.candidates:
-        for candidate in response.candidates:
-            content = getattr(candidate, "content", None)
-            parts = getattr(content, "parts", None) if content else None
-            if not parts:
-                continue
-            for part in parts:
-                if getattr(part, "inline_data", None):
-                    if hasattr(part, "as_image"):
-                        return part.as_image()
-                    if part.inline_data.data:
-                        return Image.open(io.BytesIO(part.inline_data.data)).convert("RGB")
-
-    return None
-
-
 def extract_pil_image(response):
     """
     Extract the first image from the API response as a PIL Image.
@@ -317,7 +271,89 @@ def extract_pil_image(response):
                 if raw and getattr(raw, "data", None):
                     return Image.open(io.BytesIO(raw.data)).convert("RGB")
     return None
- 
+
+    
+# ──────────────────────────────────────────────
+# FUTURE FUNCTIONS FOR: 
+# - STESSA DIMENSIONE DI TUTTE LE IMMAGINI (INPUT/OUPUT)
+# - USO DELLE REFERENCE STYLE IMAGES (OPZIONALE, DA SPERIMENTARE)
+# ──────────────────────────────────────────────
+
+def get_style_reference_image(level):
+    """
+    Return the style reference image path for the given level.
+    Assumes reference images are named like "reference_high.png", "reference_medium_high.png", etc. and located in a "StyleRefImages" folder.
+    """
+    ref_dir = STYLE_REFERENCE_DIR
+    if not ref_dir.exists():
+        return None
+    ref_path = STYLE_REFERENCE_DIR / f"reference_{level}.png"
+    if not ref_path.exists():
+        return None
+    return ref_path
+
+# TODO: Implement process_input_image_resolution(image_path, INPUT_RESOLUTION) to standardize image resolutions before sending to the API. 
+# Alla fine del process -> avrò img di input tutte alla stessa dimensione e aspect ratio
+def process_input_image_resolution(image_path, target_resolution):
+    """
+    Standardize the input image resolution before sending it to the API.
+    If *target_resolution* is None, the original image path is returned unchanged.
+    If a target resolution is provided, create a temporary resized image that
+    matches it exactly while preserving visual proportions via center-crop.
+
+    Returns:
+        (processed_image_path, output_size, output_aspect_ratio, created_temp_file)
+
+    - LondonSet: 1350x1350 -> aspect ratio 1:1
+    - ChicagoFaceDataset: 2444x1718 -> aspect ratio 3:2
+    - MultiRacialDataset: 2444x1718 -> aspect ratio 3:2
+    - FACES Dataset: 2835x3543 -> aspect ratio 4:5
+    """
+    with Image.open(image_path) as source_image:
+        input_size = source_image.size # es. 1350x1350 (London), oppure 2444x1718 (Chicago)
+        if target_resolution is None:
+            input_aspect_ratio = get_supported_aspect_ratio(source_image.width, source_image.height)
+            return (input_size, input_aspect_ratio)
+
+        if source_image.size == target_resolution:
+            input_aspect_ratio = get_supported_aspect_ratio(source_image.width, source_image.height)
+            return (input_size, input_aspect_ratio)
+        
+        standardized = ImageOps.fit(
+            source_image.convert("RGB"),
+            target_resolution,
+            method=Image.Resampling.LANCZOS,
+            centering=(0.5, 0.5),
+        )
+    '''
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    temp_file.close()
+    standardized.save(temp_file.name, format="PNG", optimize=False)
+    processed_path = Path(temp_file.name)
+    input_aspect_ratio = get_supported_aspect_ratio(*target_resolution)
+
+    return processed_path, target_resolution, input_aspect_ratio, True
+    '''
+
+
+# ──────────────────────────────────────────────
+# IMAGE PROCESSING, SAVING, AND VERIFICATION
+# ──────────────────────────────────────────────
+
+def get_supported_aspect_ratio(width: int, height: int) -> str:
+    """
+    Convert input dimensions to the closest supported aspect-ratio string.
+    Supported values: 1:1, 2:3, 3:2, 3:4, 4:3, 4:5, 5:4, 9:16, 16:9, 21:9
+    """
+    supported = ["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"]
+    target_ratio = (width / height) if height else 1.0
+
+    def to_float(ratio_str: str) -> float:
+        w, h = ratio_str.split(":")
+        return int(w) / int(h)
+
+    return min(supported, key=lambda r: abs(to_float(r) - target_ratio))
+
 
 def save_image(output_dir, source_path, level, image):
     """
@@ -342,8 +378,6 @@ def verify_saved_image(path):
         return True
     except Exception:
         return False
-    
-
 
 
 def process_one_image(client, model, image_path):
@@ -354,29 +388,46 @@ def process_one_image(client, model, image_path):
     """
     # Read original resolution for the resize-check after generation
     try:
-        with Image.open(image_path) as source_image:
-            original_size = source_image.size
+        # ANALYZE INPUT IMAGE
+        input_size, input_aspect_ratio = process_input_image_resolution(image_path, INPUT_RESOLUTION)
     except (UnidentifiedImageError, OSError):
         print(f"Skipping unreadable image: {image_path.name}")
         return
- 
+    
     for level in LEVELS:
-        print(f"  Generating [{level}]...")
+        print(f"Generating [{level}]...")
         prompt = build_prompt(level)
- 
+        # Se vogliamo usare uno style transfer da immagini reference
+        style_reference_image = get_style_reference_image(level)  # Ottieni l'immagine di riferimento per lo stile specifico del livello
+        
         # Dato il livello corrente, prima di generare un'immagine e spendere soldi,
         # 1. verifica che l'immagine associata a quel livello non esista già (potrebbe essere stata generata in un run precedente)
         # 2. se esiste già, skip al prossimo livello senza chiamare l'API, altrimenti procedi con la generazione
         expected_out_path = OUTPUT_DIR / f"{image_path.stem}_{level}.png"  # image_path.stem = nome del file senza estensione, es. "001_03" per "001_03.jpg"
         if expected_out_path.exists():
-            print(f"  Output already exists for level [{level}]: {expected_out_path}. Skipping generation.")
+            print(f"Output already exists for level [{level}]: {expected_out_path}. Skipping generation.")
             continue
  
         try:
-            generated = generate_with_retry(client, model, image_path, prompt)  # Devo ritornare una PIL Image da questa funzione
+            if style_reference_image is None:
+                print(f"No style reference image for level [{level}]. Proceeding without it.")
+                generated = generate_with_retry(client, model, image_path, prompt, input_aspect_ratio)  # Devo ritornare una PIL Image da questa funzione
+            else:
+                print(f"Using style reference image for level [{level}]: {style_reference_image}")
+                generated = generate_with_retry(
+                    client,
+                    model,
+                    image_path,
+                    prompt,
+                    input_aspect_ratio,
+                    style_reference_image=style_reference_image,
+                )
+            print(f"Image Generated features: size= {generated.size}, aspect_ratio= {generated.size[0]/generated.size[1]:.2f}")
+            
+            # SAME RESOLUTION INPUT = OUTPUT
             # Enforce same resolution as source
-            if generated.size != original_size:
-                final_image = generated.resize(original_size, Image.Resampling.LANCZOS)
+            if generated.size != input_size:
+                final_image = generated.resize(input_size, Image.Resampling.LANCZOS)
             else:
                 final_image = generated
             out_path = save_image(OUTPUT_DIR, image_path, level, final_image)
@@ -386,6 +437,8 @@ def process_one_image(client, model, image_path):
                 print(f"Saved but verification failed: {out_path}")
         except Exception as error:
             print(f"Failed for {image_path.name} at level {level}: {error}")
+
+
 
 
 
