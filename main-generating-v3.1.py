@@ -1,6 +1,5 @@
 import os
 import time
-import tempfile
 from google import genai
 from google.genai import types
 from PIL import Image, ImageOps, UnidentifiedImageError
@@ -10,6 +9,7 @@ import io
 from google.genai.types import GenerateContentConfig, Modality
 
 from constants import *
+
 
 """
 LONDON SET
@@ -102,9 +102,14 @@ def build_prompt(level: str) -> str:
     """
 
     shared_prompt = (
+        "The goal is to create a specific stylistic level of anthropomorphism based on the Uncanny Valley theory. "
+        "Depending on the level selected, the applied style will exhibit varying degrees of realism. "
+        "Starting with an image featuring a realistic subject, styles are applied ranging from a high level of anthropomorphism, "
+        "through medium-high, medium, medium-low, and low levels of anthropomorphism."
+
         "Transform the provided photograph of a person into the following artistic style (Style), "
         "preserve strictly the original composition, pose, lighting, and framing."
-        "Preserve strictly the original human anatomical proportions of all facial features and hair"
+        "Preserve strictly the original human anatomical proportions of all facial features and hair."
         "Preserve all the external features/attributes of the subject, such as hairstyle, hair color, skin tone, eye color, expression, accessories, and clothing. " 
         "Ensure Do NOT exaggerate features. Do not alter the subject's gender or age."
         "Apply the following specific artistic style: "
@@ -188,6 +193,9 @@ def generate_with_retry(client, model, image_path, prompt, aspect_ratio, style_r
         model=GEMINI_MODEL,
         contents=[prompt, image],
     )
+
+    Per impostazione predefinita, il modello abbina le dimensioni dell'immagine di output a 
+    quelle dell'immagine di input oppure genera quadrati 1:1.
     """
     last_error = None
 
@@ -298,11 +306,11 @@ def standardize_input_image(image_path, target_resolution):
     """
     Standardize the input image resolution before sending it to the API.
     If *target_resolution* is None, the original image path is returned unchanged.
-    If a target resolution is provided, create a temporary resized image that
-    matches it exactly while preserving visual proportions via center-crop.
+    If a target resolution is provided, create a standardized image on disk in
+    Images/StandardizedImages and return its path.
 
     Returns:
-        (standardized_path, output_size, output_aspect_ratio, created_temp_file)
+        (standardized_image_path, output_size, output_aspect_ratio)
 
     - LondonSet: 1350x1350 -> aspect ratio 1:1
     - ChicagoFaceDataset: 2444x1718 -> aspect ratio 3:2
@@ -313,11 +321,11 @@ def standardize_input_image(image_path, target_resolution):
         input_size = source_image.size
         if target_resolution is None:
             input_aspect_ratio = get_supported_aspect_ratio(source_image.width, source_image.height)
-            return (image_path, input_size, input_aspect_ratio, False)
+            return (image_path, input_size, input_aspect_ratio)
 
         if source_image.size == target_resolution:
             input_aspect_ratio = get_supported_aspect_ratio(source_image.width, source_image.height)
-            return (image_path, input_size, input_aspect_ratio, False)
+            return (image_path, input_size, input_aspect_ratio)
         
         standardized = ImageOps.fit(
             source_image.convert("RGB"),
@@ -325,15 +333,13 @@ def standardize_input_image(image_path, target_resolution):
             method=Image.Resampling.LANCZOS,
             centering=(0.5, 0.5),
         )
-        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-        temp_file.close()
-        standardized.save(temp_file.name, format="PNG", optimize=False)
-        standardized_path = Path(temp_file.name)
+        STANDARDIZED_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+        standardized_image_path = STANDARDIZED_IMAGES_DIR / f"{image_path.stem}_{target_resolution[0]}x{target_resolution[1]}.png"
+        standardized.save(standardized_image_path, format="PNG", optimize=False)
         return (
-            standardized_path,
+            standardized_image_path,
             standardized.size,
             get_supported_aspect_ratio(standardized.width, standardized.height),
-            True,
         )
 
 
@@ -388,9 +394,8 @@ def process_one_image(client, model, image_path):
     Levels in order: high → medium_high → medium → medium_low → low
     """
     standardized_image_path = image_path
-    created_temp_file = False
     try:
-        standardized_image_path, standardized_input_size, standardized_input_aspect_ratio, created_temp_file = standardize_input_image(
+        standardized_image_path, standardized_input_size, standardized_input_aspect_ratio = standardize_input_image(
             image_path,
             INPUT_RESOLUTION,
         )
@@ -398,53 +403,49 @@ def process_one_image(client, model, image_path):
         print(f"Skipping unreadable image: {image_path.name}")
         return
     
-    try:
-        for level in LEVELS:
-            print(f"Generating [{level}]...")
-            prompt = build_prompt(level)
-            # Se vogliamo usare uno style transfer da immagini reference
-            style_reference_image = get_style_reference_image(level)  # Ottieni l'immagine di riferimento per lo stile specifico del livello
-            
-            # Dato il livello corrente, prima di generare un'immagine e spendere soldi,
-            # 1. verifica che l'immagine associata a quel livello non esista già (potrebbe essere stata generata in un run precedente)
-            # 2. se esiste già, skip al prossimo livello senza chiamare l'API, altrimenti procedi con la generazione
-            expected_out_path = OUTPUT_DIR / f"{image_path.stem}_{level}.png"  # image_path.stem = nome del file senza estensione, es. "001_03" per "001_03.jpg"
-            if expected_out_path.exists():
-                print(f"Output already exists for level [{level}]: {expected_out_path}. Skipping generation.")
-                continue
+    for level in LEVELS:
+        print(f"Generating [{level}]...")
+        prompt = build_prompt(level)
+        # Se vogliamo usare uno style transfer da immagini reference
+        style_reference_image = get_style_reference_image(level)  # Ottieni l'immagine di riferimento per lo stile specifico del livello
+        
+        # Dato il livello corrente, prima di generare un'immagine e spendere soldi,
+        # 1. verifica che l'immagine associata a quel livello non esista già (potrebbe essere stata generata in un run precedente)
+        # 2. se esiste già, skip al prossimo livello senza chiamare l'API, altrimenti procedi con la generazione
+        expected_out_path = OUTPUT_DIR / f"{image_path.stem}_{level}.png"  # image_path.stem = nome del file senza estensione, es. "001_03" per "001_03.jpg"
+        if expected_out_path.exists():
+            print(f"Output already exists for level [{level}]: {expected_out_path}. Skipping generation.")
+            continue
  
-            try:
-                if style_reference_image is None:
-                    print(f"No style reference image for level [{level}]. Proceeding without it.")
-                    generated = generate_with_retry(client, model, standardized_image_path, prompt, standardized_input_aspect_ratio)  # Devo ritornare una PIL Image da questa funzione
-                else:
-                    print(f"Using style reference image for level [{level}]: {style_reference_image}")
-                    generated = generate_with_retry(
-                        client,
-                        model,
-                        standardized_image_path,
-                        prompt,
-                        standardized_input_aspect_ratio,
-                        style_reference_image=style_reference_image,
-                    )
-                print(f"Image Generated features: size= {generated.size}, aspect_ratio= {generated.size[0]/generated.size[1]:.2f}")
-                
-                # SAME RESOLUTION INPUT = OUTPUT
-                # Enforce same resolution as standardized input
-                if generated.size != standardized_input_size:
-                    final_image = generated.resize(standardized_input_size, Image.Resampling.LANCZOS)
-                else:
-                    final_image = generated
-                out_path = save_image(OUTPUT_DIR, image_path, level, final_image)
-                if verify_saved_image(out_path):
-                    print(f"Saved: {out_path}")
-                else:
-                    print(f"Saved but verification failed: {out_path}")
-            except Exception as error:
-                print(f"Failed for {image_path.name} at level {level}: {error}")
-    finally:
-        if created_temp_file and standardized_image_path.exists():
-            standardized_image_path.unlink(missing_ok=True)
+        try:
+            if style_reference_image is None:
+                print(f"No style reference image for level [{level}]. Proceeding without it.")
+                generated = generate_with_retry(client, model, standardized_image_path, prompt, standardized_input_aspect_ratio)  # Devo ritornare una PIL Image da questa funzione
+            else:
+                print(f"Using style reference image for level [{level}]: {style_reference_image}")
+                generated = generate_with_retry(
+                    client,
+                    model,
+                    standardized_image_path,
+                    prompt,
+                    standardized_input_aspect_ratio,
+                    style_reference_image=style_reference_image,
+                )
+            print(f"Image Generated features: size= {generated.size}, aspect_ratio= {generated.size[0]/generated.size[1]:.2f}")
+            
+            # CONTROLLO FINALE: SAME RESOLUTION INPUT = OUTPUT
+            # Enforce same resolution as source
+            if generated.size != standardized_input_size:
+                final_image = generated.resize(standardized_input_size, Image.Resampling.LANCZOS)
+            else:
+                final_image = generated
+            out_path = save_image(OUTPUT_DIR, image_path, level, final_image)
+            if verify_saved_image(out_path):
+                print(f"Saved: {out_path}")
+            else:
+                print(f"Saved but verification failed: {out_path}")
+        except Exception as error:
+            print(f"Failed for {image_path.name} at level {level}: {error}")
 
 
 def main():

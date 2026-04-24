@@ -7,7 +7,7 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 from pathlib import Path
 from dotenv import load_dotenv
 
-def process_input_image_resolution(image_path, target_resolution):
+def standardize_input_image(image_path, target_resolution):
     """
     Standardize the input image resolution before sending it to the API.
     If *target_resolution* is None, the original image path is returned unchanged.
@@ -32,13 +32,37 @@ def process_input_image_resolution(image_path, target_resolution):
             input_aspect_ratio = get_supported_aspect_ratio(source_image.width, source_image.height)
             return (input_size, input_aspect_ratio)
         
+        
+        """
+        requested_size = 1080x1080
+        - contain(): mantenere l'aspect ratio originale, ma rendendo più piccola l'img se più grande del target (su un asse)
+          es. 2444x1718 -> 1080x759 (aspect ratio 3:2) ; 2835x3543 -> 864x1080 (aspect ratio 4:5) ; 1350x1350 -> 1080x1080 (aspect ratio 1:1)
+        - cover(): mantenere l'aspect ratio originale, ma rendendo più grande l'img se più piccola del target (su un asse)
+        - fit(): Se vuoi che l'immagine finale abbia esattamente le dimensioni del target, ma accetti di tagliare parti dell'immagine originale (center-crop).
+        """
+
         standardized = ImageOps.fit(
             source_image.convert("RGB"),
             target_resolution,
             method=Image.Resampling.LANCZOS,
             centering=(0.5, 0.5),
         )
-    standardized.show()
+        '''standardized = ImageOps.contain(
+            source_image.convert("RGB"),
+            target_resolution,
+            method=Image.Resampling.LANCZOS)'''
+        '''
+        standardized = ImageOps.cover(
+            source_image, 
+            target_resolution, 
+            method=Image.Resampling.LANCZOS)'''
+        
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+        temp_file.close()
+        standardized.save(temp_file.name, format="PNG", optimize=False)
+        processed_path = Path(temp_file.name)
+        
+    return processed_path
 
 
 # ──────────────────────────────────────────────
@@ -63,9 +87,18 @@ def get_supported_aspect_ratio(width: int, height: int) -> str:
 
 def main():
     # Example usage of process_input_image_resolution
-    image_path = Path("C:\\Users\\Alessandro\\VisualStudioCodeProjects\\VirtualInfluencer\\Images\\ChicagoFaceDataset\\WhiteFemale\\CFD-WF-001-003-N.jpg")
-    target_resolution = (1024, 1024)  # Example target resolution
-    result = process_input_image_resolution(image_path, target_resolution)
+    '''
+    - LondonSet: 1350x1350 -> aspect ratio 1:1
+    - ChicagoFaceDataset: 2444x1718 -> aspect ratio 3:2
+    - MultiRacialDataset: 2444x1718 -> aspect ratio 3:2
+    - FACES Dataset: 2835x3543 -> aspect ratio 4:5'''
+    #image_path = Path("Images","Prove", "CFD-WM-001-014-N.jpg")
+    image_path = Path("Output_images", "CFD-WM-001-014-N_high.png")
+    print (f"Processing image: {image_path}")
+    target_resolution = (1080, 1080)  # Example target resolution
+    result = standardize_input_image(image_path, target_resolution)
+    img = Image.open(result)
+    img.show()
 
 if __name__ == "__main__":
     main()

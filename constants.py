@@ -1,6 +1,6 @@
 from pathlib import Path
 
-ROOT_DIR = Path(__file__).parent
+ROOT_DIR = Path(__file__).parent # VirtualInfluencer project root directory
 #INPUT_DIR = ROOT_DIR / "Images" / "LondonSet" # se usi il LondonSet
 INPUT_DIR = ROOT_DIR / "Images" / "ChicagoFaceDataset" / "WhiteMale" # se usi il Chicago Face Dataset
 OUTPUT_DIR = ROOT_DIR / "Output_images"
@@ -22,4 +22,5 @@ EDITING_LEVELS = ["level_1", "level_2", "level_3", "level_4", "level_5"]
 
 
 # IMAGES
-INPUT_RESOLUTION = None
+INPUT_RESOLUTION = (1080, 1080) # (1080, 1080) # Set to None to keep original resolution; otherwise, specify target resolution as (width, height) tuple.
+STANDARDIZED_IMAGES_DIR = ROOT_DIR / "Images" / "StandardizedImages" # da usare solo con v3.1
