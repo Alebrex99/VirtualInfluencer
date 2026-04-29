@@ -10,7 +10,7 @@ from google.genai.types import GenerateContentConfig, Modality
 
 from constants import *
 
-# VERSION 3.1: PIPELINE WITHOUT REFERENCE STYLE IMAGE, INPUT STANDARDIZATION, AND IMPROVED PROMPT ENGINEERING
+# VERSION 4: PIPELINE WITH REFERENCE STYLE IMAGE
 
 """
 LONDON SET
@@ -102,53 +102,57 @@ def build_prompt(level: str) -> str:
     element should integrate].
     """
 
+    # Definiamo la scala AA per il contesto del modello
+    aa_scale_context = (
+        "CONTEXT: Anthropomorphic Style Appearance (AA) Research. "
+        "Goal: Create a synthetic rendering that observers classify on the AA Scale. "
+        "AA1: Humanlike rendering. "
+        "AA2: Lifelike rendering. "
+        "AA3: Humanlike appearance. "
+        "AA4: Physical characteristics resemble a real person but through a synthetic lens."
+    )
+
     shared_prompt = (
-        "The primary objective is to create and render a a specific stylistic level of anthropomorphism, "
-        "based on the provided photograph of a realistic subject. "
-        "Anthropomorphism here refers to the precise visual translation of a realistic subject's fundamental features "
-        "and specific traits into varying degrees of artistic and digital humanoid forms, "
-        "ranging from a high level of near-human photorealism, through medium-high, medium, medium-low, and low levels of anthropomorphism. "
-        "The key variable is the style of anthropomorphic rendering, while the subject's identity, core anatomical structure, and unique flaws must be rigorously preserved."
+        f"{aa_scale_context}\n"
+        "TASK: High-fidelity Digital Asset Reconstruction. "
+        "Transform the provided photograph (Base Image) into a synthetic-digital rendering. "
 
-        "Transform the provided photograph of a person into the following artistic style level (Style)."
-        "Preservation of features is paramount and includes all existing imperfections and specific traits."
+        "INPUT: 1. IMAGE 1 (Base) is the geometric identity. Use this for Identity, Geometry, and COMPOSITION. "
+        "2. IMAGE 2 (Style Reference - Optional) is the shader source: Use ONLY as a rendering tool for textures,  "
+        "the absolute source for the rendering engine, texture and shader/light quality. Do NOT adopt the identity of Image 2. "
         
-        "Human anatomical features: "
-        "The subject must retain any blemishes, scars, skin texture irregularities, asymmetrical facial features "
-        "(e.g., a slightly crooked part of the face, a non-standard feature), distinct facial elements "
-        "(e.g., unique ear shape, missing or unusual parts), and overall structural characteristics. "
-        "These specific attributes must be rendered consistently across all 5 stylistic levels. "
-        "Do not smooth, remove, or idealize defects; instead, render them within the context of the selected style. "
-        "Ensure you do not add or remove facial features, hair, or accessories, and do not alter the subject's fundamental gender, age, or attributes. "
-        "The original human anatomical proportions of all facial features/elements (like eyes, nose, ears or mouth), haircut, expression, clothing, and accessories must be strictly "
-        "maintained in their exact geometry and spatial arrangement across all levels. "
-        "No facial features should be stylisticly exaggerated in size in any level unless the original has extremely large features."
+        "INSTRUCTION: Treat the subject in IMAGE 1 as a 3D digital mesh. "
+        "You MUST re-surface this mesh using a synthetic-digital rendering engine. "
         
-        "Atttractiveness and Aesthetic Perception: "
-        "Crucially, the inherent attractiveness and aesthetic perception of the subject must remain constant and consistent between all levels. "
-        "The applied styles must use the same aesthetic canons to evaluate the subject, varying only the graphical rendering style and the perception of real-world human realism, "
-        "but never altering the overall perception of the subject's attractiveness or unique identity. The goal is a consistent aesthetic quality achieved through different anthropomorphic forms. The final visual must be aesthetically pleasing but with all unique, non-ideal traits."
+        "IDENTITY ANCHOR: Maintain the exact spatial coordinates of all facial features, anatomical proportions, "
+        "asymmetries, and specific skin traits (freckles, scars, blemishes). "
+        "Maintain the exact length, density, and spatial coordinates of all facial and body hair (including beard, eyebrows, eyelashes, and fine peach fuzz). " 
+        "However, do not use the original pixels; re-render them with digital shaders."
+        
+        "SURFACE PROTOCOL: Do not use original pixels. Re-render every surface (skin, hair, fabric) "
+        "using digital shaders. The final result must be a synthetic-digital reconstruction."
+        
+        "COMPOSITION: "
+        "Keep the original pose, lighting directions and angles, shadow placement, environment, background and framing. "
+        "Keep the original clothing and accessories, including their exact geometry and spatial arrangement. "
+        "Do not add or remove any accessories or clothing items. "
 
-        "Image Composition and structure: "
-        "preserve strictly the original composition, pose, lighting, and framing."
-        "Ensure do NOT add or remove any facial features, hair, or accessories. Do not add any new elements to the image. "
-        "Apply the following specific artistic style: "
+        "The goal is a consistent aesthetic quality across all 5 digital levels. "
     )
     
     # ── Level 1 — High (Polished Photorealism) ──────────────────────────────
-    # Massima aderenza alla realtà. Solo pulizia estetica estrema.
     if level == "high":
         return (
             shared_prompt
-            + "Style: Highly refined, high-fidelity near-human photorealism with professional studio presentation. "
-            + "Retain full, near-human realism but apply professional studio-level definition to the overall image quality and presentation, "
-            + "rather than removing skin defects. Apply immaculate, crisp light quality, advanced skin detail rendering "
-            + "(preserving every blemish but with superior clarity), and overall refined graphical presentation."
-            + "Crucially, retain all original blemishes, scars, skin texture irregularities, asymmetries, and all other unique facial flaws and attributes."
-            + "The 'anthropomorphic difference' is a refined visual clarity and impeccable presentation, applying clean studio lighting to a face that includes all its non-ideal features. "
-            + "Refine the hair volume and natural flow while maintaining the exact texture and geometry. "
-            + "The final image presents a flawlessly presented human form that is visually cleaned up in its composition but retains all specific skin defects and proportions, resembling a professional portrait. "
-            + "Proportions and features are preserved without exaggeration. The identity and all flaws must be rendered with high aesthetic quality."
+            + "LEVEL: HIGH. TARGET EVALUATION: AA4. "
+            + "STYLE: 'The AI-Signature Look' / Hyper-detailed CGI. "
+            + "INSTRUCTION: Create an unrealistic HDR effect. Exaggerate the micro-contrast of the skin. "
+            + "Increase the brightness and 'glassy' reflection of the eyes. "
+            + "Apply extreme algorithmic sharpening to all natural edges. "
+            + "The edge sharpness must come entirely from the high-resolution digital rendering and edge-contrast, "
+            + "typical of raw AI-generated assets. "
+            + "The skin must have a high-specular shine and visible digital pores, looking like a "
+            + "perfectly polished Virtual Influencer asset."
         )
 
     # ── Level 2 — Medium-High (High-End Video Game) ─────────────────────────
@@ -157,11 +161,11 @@ def build_prompt(level: str) -> str:
     if level == "medium_high":
         return (
             shared_prompt
-            + "Style: 3D Digital realism with an evident CGI quality. "
-            + "change the skin: poreless skin texture, soft subsurface, light scattering that gives the skin a slightly luminous, synthetic glow. "
-            + "change the hair: refine the hair to look like a high-resolution CGI render. "
-            + "The result should appear with a noticeable digital "
-            + "perfection that hints at computer generation rather than a real photograph."
+            + "LEVEL: MEDIUM-HIGH. TARGET EVALUATION: AA2/AA3. "
+            + "STYLE: High-end Real-time Game Engine (e.g., Unreal Engine 5). "
+            + "INSTRUCTION: Apply a clean, subsurface scattering shader to the skin for a subtle synthetic glow. "
+            + "The skin is smoother than the 'High' level, with a soft-focus digital perfection. "
+            + "Maintain the identity clearly, but the texture should look like a high-budget digital character."
         )
 
     # ── Level 3 — Medium (Mid-tier CGI / Uncanny Valley) ────────────────────
@@ -169,10 +173,11 @@ def build_prompt(level: str) -> str:
     if level == "medium":
         return (
             shared_prompt
-            + "Style: Mid-2000s cinematic 3D computer render, similar to 'The Polar Express'. "
-            + "change the skin: a slightly waxy and rubbery finish, making it appear distinctly artificial and waxy, "
-            + "change the eyes: a glassy, slightly lifeless quality that gives away the CGI nature. "
-            + "change the hair: 3D rendered hair with visible clumping and a slightly stiff, unnatural flow. "
+            + "LEVEL: MEDIUM. TARGET EVALUATION: AA1. "
+            + "STYLE: Early 2000s Cinematic CGI (The Polar Express effect). "
+            + "INSTRUCTION: Apply a waxy and rubbery finish to the skin. "
+            + "The eyes should have a slightly static, glassy quality that feels uncanny. "
+            + "The rendering is clearly humanlike but unmistakably artificial and digital."
         )
 
     # ── Level 4 — Medium-Low (Proportional 3D Animation) ────────────────────
@@ -181,9 +186,11 @@ def build_prompt(level: str) -> str:
     if level == "medium_low":
         return (
             shared_prompt
-            + "Style: Modern 3D animated feature film CGI. "
-            + "Render it with soft, stylized 3D shading, smooth plastic-like surfaces, and volumetric simplified hair, but with the same proportions to the original. "
-            + "Apply only the texture, coloring, and lighting style of a 3D family animation to the exact original geometry."
+            + "LEVEL: MEDIUM-LOW. TARGET EVALUATION: Below AA1. "
+            + "STYLE: Modern 3D Animated Film (Pixar-style). "
+            + "INSTRUCTION: Simplify all surfaces into smooth, plastic-like volumes. "
+            + "Maintain the original facial proportions and lighting direction, but use "
+            + "volumetric simplified hair and solid colors for the skin."
         )
 
     # ── Level 5 — Low (Proportional 2D Cartoon / Illustration) ──────────────
@@ -192,11 +199,11 @@ def build_prompt(level: str) -> str:
     if level == "low":
         return (
             shared_prompt
-            + "Style: Flat 2D digital illustration. "
-            + "Render it with vector-style art and flat color blocking "
-            + "Completely transform the visual style into a stylized digital painting or vector-style cartoon. "
-            + "Use simplified facial features, flat textures, and illustrative strokes, "
-            + "moving away from photographic realism into a fully illustrated character concept."
+            + "LEVEL: LOW. TARGET EVALUATION: Below AA1. "
+            + "STYLE: 2D Flat Digital Illustration. "
+            + "INSTRUCTION: Completely remove 3D depth. Use flat color blocking and clean "
+            + "vector-style outlines. Map the subject's identity traits (asymmetries, scars) "
+            + "as 2D graphic elements on a flat digital drawing."
         )
     raise ValueError(f"Unsupported level: {level}")
 
@@ -227,13 +234,14 @@ def generate_with_retry(client, model, image_path, prompt, aspect_ratio, style_r
         try:
             # Direct image input using PIL.Image (no byte conversion for input)
             with Image.open(image_path) as input_image:
+                # L'ordine è fondamentale: [Prompt, Image 1 (Identity), Image 2 (Style)]
                 contents = [prompt]
-                
+                contents.append(input_image)  # Image 1: Base Identity
+
                 if style_reference_image is not None:
                     with Image.open(style_reference_image) as style_image:
                         contents.append(style_image.copy())
                 
-                contents.append(input_image)
                 response = client.models.generate_content(
                     model=model,
                     contents=contents,
@@ -245,6 +253,7 @@ def generate_with_retry(client, model, image_path, prompt, aspect_ratio, style_r
                 )
             
             # DEBUG =====================================
+            # Controlla se la risposta contiene feedback di moderazione o motivi di blocco
             if hasattr(response, "prompt_feedback") and response.prompt_feedback:
                 print(f"  Blocked — prompt feedback: {response.prompt_feedback}")
             #finishReason: Il motivo per cui il modello ha smesso di generare token. Se None allora tutto ok
@@ -315,15 +324,25 @@ def extract_pil_image(response):
 def get_style_reference_image(level):
     """
     Return the style reference image path for the given level.
-    Assumes reference images are named like "reference_high.png", "reference_medium_high.png", etc. and located in a "StyleRefImages" folder.
+    Assumes reference images are named like "reference_high.jpg", "reference_medium_high.jpg", etc. and located in a "StyleRefImages" folder.
+    The image file type can be .jpg, .jpeg, or .png. If the expected image does not exist, returns None.
     """
     ref_dir = STYLE_REFERENCE_DIR
     if not ref_dir.exists():
+        print(f"Style reference directory does not exist: {ref_dir}. Proceeding without style reference images.")
         return None
-    ref_path = STYLE_REFERENCE_DIR / f"reference_{level}.png"
-    if not ref_path.exists():
-        return None
-    return ref_path
+
+    target_stem = f"reference_{level}".lower()
+    for ref in sorted(ref_dir.iterdir()):
+        if (
+            ref.is_file()
+            and ref.suffix.lower() in ALLOWED_EXTENSIONS
+            and ref.stem.lower() == target_stem
+        ):
+            return ref
+
+    print(f"Style reference image not found for level '{level}' in {ref_dir}. Proceeding without style reference images.")
+    return None
 
 # Alla fine del process -> avrò img di input tutte alla stessa dimensione e aspect ratio
 def standardize_input_image(image_path, target_resolution):
@@ -341,6 +360,7 @@ def standardize_input_image(image_path, target_resolution):
     - MultiRacialDataset: 2444x1718 -> aspect ratio 3:2
     - FACES Dataset: 2835x3543 -> aspect ratio 4:5
     """
+
     with Image.open(image_path) as source_image:
         input_size = source_image.size
         if target_resolution is None:
@@ -351,6 +371,10 @@ def standardize_input_image(image_path, target_resolution):
             input_aspect_ratio = get_supported_aspect_ratio(source_image.width, source_image.height)
             return (image_path, input_size, input_aspect_ratio)
         
+        expected_standardized_path = STANDARDIZED_IMAGES_DIR / f"{image_path.stem}_{target_resolution[0]}x{target_resolution[1]}.png"
+        if expected_standardized_path.exists():
+            return (expected_standardized_path, target_resolution, get_supported_aspect_ratio(target_resolution[0], target_resolution[1]))
+
         standardized = ImageOps.fit(
             source_image.convert("RGB"),
             target_resolution,

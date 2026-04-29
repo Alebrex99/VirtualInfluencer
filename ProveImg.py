@@ -7,6 +7,7 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 from pathlib import Path
 from dotenv import load_dotenv
 
+
 def standardize_input_image(image_path, target_resolution):
     """
     Standardize the input image resolution before sending it to the API.
@@ -41,28 +42,31 @@ def standardize_input_image(image_path, target_resolution):
         - fit(): Se vuoi che l'immagine finale abbia esattamente le dimensioni del target, ma accetti di tagliare parti dell'immagine originale (center-crop).
         """
 
-        standardized = ImageOps.fit(
+        '''standardized = ImageOps.fit(
             source_image.convert("RGB"),
             target_resolution,
             method=Image.Resampling.LANCZOS,
             centering=(0.5, 0.5),
-        )
-        '''standardized = ImageOps.contain(
+        )'''
+        standardized = ImageOps.contain(
             source_image.convert("RGB"),
             target_resolution,
-            method=Image.Resampling.LANCZOS)'''
+            method=Image.Resampling.LANCZOS)
         '''
         standardized = ImageOps.cover(
             source_image, 
             target_resolution, 
             method=Image.Resampling.LANCZOS)'''
         
-        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+        # TEMP FILE
+        '''temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
         temp_file.close()
         standardized.save(temp_file.name, format="PNG", optimize=False)
-        processed_path = Path(temp_file.name)
-        
-    return processed_path
+        processed_path = Path(temp_file.name)'''
+        standardized_image_path = image_path.parent / f"{image_path.stem}_{target_resolution[0]}x{target_resolution[1]}.png"
+        standardized.save(standardized_image_path, format="PNG", optimize=False)
+        return (
+            standardized_image_path)
 
 
 # ──────────────────────────────────────────────
@@ -93,7 +97,7 @@ def main():
     - MultiRacialDataset: 2444x1718 -> aspect ratio 3:2
     - FACES Dataset: 2835x3543 -> aspect ratio 4:5'''
     #image_path = Path("Images","Prove", "CFD-WM-001-014-N.jpg")
-    image_path = Path("Output_images", "CFD-WM-001-014-N_high.png")
+    image_path = Path("Images", "StyleRefImages", "reference_high.jpg")
     print (f"Processing image: {image_path}")
     target_resolution = (1080, 1080)  # Example target resolution
     result = standardize_input_image(image_path, target_resolution)
