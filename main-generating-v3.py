@@ -11,6 +11,8 @@ from google.genai.types import GenerateContentConfig, Modality
 
 from constants import *
 
+# VERSIONE 3: PIPELINE OLD + STANDARDIZZAZIONE RISOLUZIONE INPUT + USO OPZIONALE DELLE STYLE REFERENCE IMAGES + VECCHIO PROMPT
+
 """
 LONDON SET
     - 1350x1350 px, 1:1 aspect ratio, 5 levels of anthropomorphism

@@ -1,5 +1,6 @@
 import os
 import time
+import sys
 from google import genai
 from google.genai import types
 from PIL import Image, UnidentifiedImageError
@@ -8,6 +9,7 @@ from dotenv import load_dotenv
 import io
 from google.genai.types import EditImageConfig, EditMode
 
+sys.path.append(str(Path(__file__).resolve().parent.parent))
 from constants import *
 
 """GOOGLE API IMAGEN EDITING PIPELINE (Parameter-based):
