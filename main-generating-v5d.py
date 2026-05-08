@@ -10,7 +10,9 @@ from google.genai.types import GenerateContentConfig, Modality
 
 from constants import *
 
-# VERSION 4: PIPELINE WITH REFERENCE STYLE IMAGE
+# VERSION :5 PIPELINE FOR GEMINI 3 PRO IMAGE PREVIEW + OPUS GENERATED PROMPT AND GEMINI CLOUD REPHRASING
+
+
 
 """
 LONDON SET
@@ -140,191 +142,247 @@ def get_test_input_images(test_input_dir):
     return result
 
 
-# ---------------------------
-# Prompt construction
-# ---------------------------
+"""
+build_prompt_v6.1
+─────────────────────────────────────────────────────────────────────────────
+Changes vs v6.0
+  SHARED locked_context:
+    • Exposure/shadow anchor strengthened: now explicitly prohibits deepening,
+      expanding, or intensifying shadow coverage beyond the reference.
+      (Fixes the over-dark face + heavy shadow problem on all levels.)
+
+  MEDIUM_HIGH:
+    • Removed "shadows are hard-edged and computed, not naturally diffused" —
+      this was the direct cause of the heavy rim-shadow on jaw/neck.
+    • Replaced with: shadow intensity and spread must match the reference;
+      only the edge quality (computed vs. organically diffused) may differ.
+
+  MEDIUM:
+    • Restored "The Polar Express (2004)" as the sole, strong visual anchor.
+      (Multiple anchors in v6.0 created ambiguity → wrong aesthetic.)
+    • Restored explicit "flat diffuse" language.
+    • Added a level-specific brightness lock: flat-diffuse materials naturally
+      read darker — the model must compensate to match reference exposure.
+    • Removed "Final Fantasy: The Spirits Within" second reference.
+─────────────────────────────────────────────────────────────────────────────
+"""
+
+
 def build_prompt(level: str) -> str:
-    """
-    Build anthropomorphism prompt with shared constraints + level-specific style.
- 
-    Five levels are defined, progressing from full photorealism (high) to full
-    cartoon illustration (low). The two intermediate levels (medium_high and
-    medium_low) bridge the gap while following the same prompt engineering
-    approach: style-based requests that focus exclusively on rendering style
-    and visual aesthetic, never on identity or facial structure changes.
-    This framing avoids content-policy blocks by keeping requests
-    style-transfer-only rather than face-manipulation requests.
- 
-    To elevate your results from good to great, incorporate these professional strategies into your workflow.
-    - Be Hyper-Specific: The more detail you provide, the more control you have. Instead of "fantasy armor," describe it: "ornate elven plate armor, etched with silver leaf patterns, with a high collar and pauldrons shaped like falcon wings."
-    - Provide Context and Intent: Explain the purpose of the image. The model's understanding of context will influence the final output. For example, "Create a logo for a high-end, minimalist skincare brand" will yield better results than just "Create a logo."
-    - Iterate and Refine: Don't expect a perfect image on the first try. Use the conversational nature of the model to make small changes. Follow up with prompts like, "That's great, but can you make the lighting a bit warmer?" or "Keep everything the same, but change the character's expression to be more serious."
-    Use Step-by-Step Instructions: For complex scenes with many elements, break your prompt into steps. 
-    - "First, create a background of a serene, misty forest at dawn. Then, in the foreground, add a moss-covered ancient stone altar. Finally, place a single, glowing sword on top of the altar."
-    - Use "Semantic Negative Prompts": Instead of saying "no cars," describe the desired scene positively: "an empty, deserted street with no signs of traffic."
-    Control the Camera: Use photographic and cinematic language to control the composition. Terms like wide-angle shot, macro shot, low-angle perspective.
-    
-    PROMPT BASE (sostituire)
-    Using the provided images, place [element from image 2] onto [element from
-    image 1]. Ensure that the features of [element from image 1] remain
-    completely unchanged. The added element should [description of how the
-    element should integrate].
-    """
-    
-    # Definiamo la scala AA per il contesto del modello
-    aa_scale_context = (
-        "CONTEXT: Anthropomorphic Style Appearance (AA) Research. "
-        "'Anthropomorphic Style Appearance' (AA) refers to the degree of digital-synthetic effect of a generated rendering. "
-        "Goal: Create a synthetic rendering of a virtual influencer that observers classify on the AA Scale. "
-        "AA1: the rendered virtual influencer is Humanlike. "
-        "AA2: the rendered virtual influencer is Lifelike. "
-        "AA3: the rendered virtual influencer has a Humanlike appearance. "
-        "AA4: the rendered virtual influencer has Physical characteristics that resemble a real person but through a synthetic lens."
+
+    # ─────────────────────────────────────────────────────────────────────
+    # SHARED LOCKED CONTEXT
+    # ─────────────────────────────────────────────────────────────────────
+    locked_context = (
+        "Generate an image of a synthetic 3D character asset produced by a professional "
+        "real-time rendering engine. "
+
+        "The attached reference photograph serves exclusively as the canonical geometric "
+        "source mesh — a 3D scan providing structure, never pixels. "
+        "Every surface in the output must be re-rendered through a digital shader "
+        "engine; the result must read as a fully synthetic, computer-generated character, "
+        "never a photograph or a retouched photo. "
+
+        # ── IDENTITY LOCK ────────────────────────────────────────────────
+        "The following identity attributes from the reference mesh must be preserved "
+        "with full fidelity, re-expressed through the target shader: "
+        "the exact spatial layout and proportions of every facial feature, all asymmetries "
+        "and individual bone structure; every freckle, mole, scar, pimple, and area of "
+        "uneven pigmentation, reproduced as localised texture data mapped onto the new "
+        "surface material; the complete hair system including exact hairline position, "
+        "parting direction, length, density, and natural colour, re-rendered in the "
+        "target digital shading style; eyebrow shape, density, and colour; "
+        "eyelashes; any fine facial hair or peach fuzz, preserved as shader-level detail; "
+        "every accessory present in the reference (hair clips, earrings, piercings, "
+        "glasses, necklaces, garments), kept at their exact spatial coordinates, "
+        "geometry, and original colour value. "
+        "The subject's apparent age, gender, ethnicity, and the specific facial "
+        "attractiveness that defines this individual must remain identical — "
+        "the inherent aesthetic quality of the subject is constant; "
+        "only the rendering style changes. "
+
+        # ── COMPOSITION LOCK ─────────────────────────────────────────────
+        "The following composition parameters are fixed and must be reproduced exactly: "
+        "a centered, frontal head-and-shoulders portrait with the subject looking directly "
+        "at the camera; the exact head tilt, gaze direction, and neutral closed-mouth "
+        "expression of the reference; the original camera framing, crop, distance, and "
+        "aspect ratio; the original key-light direction and light angle — the light vector "
+        "is locked and must not be shifted; "
+        "the clothing geometry, colour, and spatial arrangement from the reference; "
+        "a solid, uniform, pure white background (#FFFFFF, fully opaque, "
+        "no gradient, no vignette, no coloured cast) filling the entire "
+        "area outside the subject. "
+
+        # ── EXPOSURE + SHADOW LOCK ───────────────────────────────────────
+        # This is the critical shared fix: prevents over-darkening on all levels.
+        "EXPOSURE AND SHADOW LOCK — this constraint overrides all shader-style "
+        "instructions: the overall brightness of the face and clothing must match "
+        "the reference photograph. "
+        "The shadow coverage, shadow intensity, and shadow spread across the face, "
+        "neck, and clothing must not exceed what is visible in the reference — "
+        "do not deepen, expand, or intensify shadows beyond the reference. "
+        "The shadow terminator position follows the locked light vector. "
+        "The background is rendered as bright, clean, solid white (#FFFFFF). "
+
+        # ── VARIABLE ─────────────────────────────────────────────────────
+        "The ONLY variable allowed to change is the surface shading model and material "
+        "rendering style, as specified below. "
+        "Target render style:\n\n"
     )
 
-    minimal_shared_prompt = (
-        "TASK: Digital Asset Reconstruction. "
-        "Transform the provided photograph (base image) into a synthetic-digital rendering. "
-    )
-    shared_prompt = (
-        "TASK: Digital Asset Reconstruction. "
-        "Transform the provided photograph (Base Image) into a synthetic-digital rendering. "
- 
-        "INPUT: Base image is the geometric identity. Use this for Identity, Geometry, and Composition. "
-        #"2. IMAGE 2 (Style Reference - Optional) is the shader source: Use ONLY as a rendering tool for textures, "
-        #"the absolute source for the rendering engine, texture and shader/light quality. Do NOT adopt the identity of Image 2. "
- 
-        "INSTRUCTION: Treat the subject in base image as a 3D digital mesh. "
-        "You MUST re-surface this mesh using a synthetic-digital rendering engine. "
- 
-        "IDENTITY ANCHOR: Maintain the exact spatial coordinates of all facial features, anatomical proportions, "
-        "asymmetries, and specific skin traits (freckles, scars, blemishes). "
-        "Maintain the exact length, density, and spatial coordinates of all facial and body hair (including hair, haircut, beard, eyebrows, eyelashes, and fine peach fuzz). "
-        "However, re-render the original pixels with digital shaders."
- 
-        "SURFACE PROTOCOL: Re-render every surface (skin, hair, fabric) "
-        "using digital shaders. The final result must be a synthetic-digital reconstruction."
- 
-        "COMPOSITION: "
-        "Keep the original pose, lighting directions and angles, shadow placement, environment, background and framing. "
-        "Keep the original clothing and accessories, including their exact geometry and spatial arrangement. "
-        "Keep the original accessories or clothing items. "
-        "The goal is a consistent aesthetic quality across all 5 digital levels. "
-    )
-    
-    # ── Level 1 — High (Polished Photorealism) ──────────────────────────────
-    #PROMPT BUONO SE VOGLIAMO TOGLIERE BRUFOLI E RENDERE TIPICO AI-GENERATED: 
-    #    + "LEVEL: HIGH. TARGET EVALUATION: AA1. "
-    #    + "STYLE: Midjourney v5 signature look / AI-generated digital art. "
-    #    + "INSTRUCTION: Render the subject with extreme algorithmic smoothness. "
-    #    + "The skin must appear flawlessly airbrushed and digitally perfect, exhibiting a synthetic, denoised plastic quality typical of raw generative AI outputs. "
-    #    + "Lighting should be uniform and clinical, highlighting the artificial perfection of the digital reconstruction."
+    # ─────────────────────────────────────────────────────────────────────
+    # LEVEL: HIGH
+    # ─────────────────────────────────────────────────────────────────────
     if level == "high":
         return (
-            shared_prompt
-            + "ANTHROPOMORPHISM LEVEL: HIGH."
-            + "STYLE: 'The AI-Signature Look' / Hyper-detailed CGI. " # PROVA: + "STYLE: Midjourney v5 signature look / AI-generated digital art. "
-            + "INSTRUCTION: Create an unrealistic HDR effect. " # "Apply micro-contrast and extreme clarity to the skin. "
-            + "Increase the 'glassy' reflection of the eyes, mantaining the original color. "
-            + "Apply extreme algorithmic sharpening to all natural edges. "
-            + "The edge sharpness must come entirely from the high-resolution digital rendering and edge-contrast, "
-            + "typical of raw AI-generated assets. "
-            + "The skin must appear flawlessly airbrushed and digitally perfect, exhibiting a synthetic, denoised plastic quality typical of raw generative AI outputs and " # + "The skin must have a high-specular shine and visible digital pores, looking like a "
-            + "highlighting the artificial perfection of the digital reconstruction and micro-details." # + "perfectly polished Virtual Influencer asset."
+            locked_context +
+            "RENDER STYLE — HIGH: Hyper-detailed AI-generated virtual influencer asset "
+            "in the aesthetic of Midjourney v5 or top-tier generative portrait art. "
+            "Re-render the skin surface with ultra-sharp algorithmic micro-detail: "
+            "every pore, freckle, and skin mark is present and rendered as a "
+            "mathematically precise, high-contrast micro-texture — the impossible "
+            "clarity that is the signature of raw generative AI portraits. "
+            "The skin tone carries a subtle synthetic luminance, with micro-contrasted "
+            "mid-tones and a slight denoised sheen that reads as 'too clean to be a "
+            "photograph'. "
+            "Eyes are rendered with over-specular, glassy irises showing a "
+            "mathematically perfect radial pattern in the original eye colour, "
+            "with crisp, high-contrast limbal rings. "
+            "Hair strands, eyelashes, and garment edges are algorithmically "
+            "over-sharpened, with individually rendered fibres and precise specular "
+            "highlights on each strand. "
+            "The final image reads unmistakably as a high-end synthetic character "
+            "asset — technically flawless, slightly uncanny, hyper-precise. "
+            "Exposure is bright and clean, matching the original, with a solid "
+            "white (#FFFFFF) background."
         )
 
-    # ── Level 2 — Medium-High (High-End Video Game) ─────────────────────────
-    # Molto realistico, ma la perfezione di texture e luci tradisce la natura CGI.
-    # PROMPT EFFICACE
-    #    + "LEVEL: MEDIUM-HIGH. TARGET EVALUATION: AA2. "
-    #    + "STYLE: High-end 3D Character Game Asset / Real-time Engine Render. "
-    #    + "INSTRUCTION: Render the subject as a solid, playable 3D videogame character model. "
-    #    + "TEXTURE & SHADER: Apply a standardized PBR game shader. The skin must look like a dense, opaque digital material with hard-clamped Subsurface Scattering, revealing its nature as a computational surface. "
-    #    + "HAIR & GROOMING: Render the scalp hair and eyebrows as structured geometric hair-cards. Treat any jawline shading strictly as a flat albedo texture overlay, maintaining the exact original density. "          
-    #    + "EYES: Feature baked viewport reflections and a mathematically precise, digitally-rendered iris. "
-    #    + "OVERALL EFFECT: A sculpted 3D character asset showcasing clean digital surfaces and robust engine-computed shading."
+    # ─────────────────────────────────────────────────────────────────────
+    # LEVEL: MEDIUM_HIGH
+    # Fix: removed "shadows are hard-edged and computed, not naturally diffused"
+    # which was causing the heavy jaw/neck shadow.
+    # Replaced with explicit shadow-intensity match instruction.
+    # ─────────────────────────────────────────────────────────────────────
     if level == "medium_high":
         return (
-            shared_prompt
-            + "ANTHROPOMORPHISM LEVEL: MEDIUM-HIGH. "
-            + "STYLE: high-end 3D Character Game Asset (call of duty modern warfare 2019 characters aesthetic). "
-            + "INSTRUCTION: Render a high-end playable videogame 3D character. "
-            + "The image must look like a game engine render, rejecting any photographic realism."
-        
-            + "The skin must look like a synthetic material, artificial and mathematically calculated, with a hard-clamped Subsurface Scattering. "
-            + "Hair, eyebrows and facial hair must be rendered as distinct digital strands with engine-calculated highlights. "  
-            + "Strictly maintain the original hair density and placement from base image. "  
-            + "Strictly maintain the original facial characteristics, position, form, proportions, and lighting condition placement from base image. "          
-            + "Eyes must feature 'baked' reflections and a piercing, digitally-rendered iris, clearly mathematically generated. "
-            + "OVERALL EFFECT: A premium sculpted 3D character asset with digital surfaces and a solid, rendered appearance."
+            locked_context +
+            "RENDER STYLE — MEDIUM-HIGH: A high-poly real-time 3D character asset for "
+            "a AAA game engine, in the visual aesthetic of Uncharted 4 (mantain the original lighting conditions and intensity). "
+            "The skin surface is rendered using a PBR material with a strongly "
+            "diffuse-dominant albedo: subsurface scattering is present but clamped, "
+            "producing an opaque, dense, slightly waxy appearance that clearly rejects "
+            "biological photorealism. "
+            "Freckles, moles, and skin marks are re-expressed as albedo and normal-map "
+            "data — visible as high-contrast texture stamps on the surface, reading as "
+            "digitally authored rather than organic. "
+            "Micro-surface detail (pores, fine skin texture) is rendered as "
+            "mathematically generated normal-map noise, uniform and slightly too "
+            "regular to be real. "
+            "Hair strands and eyebrows are rendered as game-engine hair ribbons: "
+            "distinct, geometrically clean alpha cards with baked specular highlights, "
+            "retaining the original hairline, density, and colour. "
+            "Eyes have static, pre-baked environment reflections with sharp specular "
+            "hotspots — no dynamic caustics. "
+            "Light interacts with the surface as a real-time directional shader: "
+            "the light direction and shadow placement match the reference exactly; "
+            "shadow intensity and coverage area must not exceed the reference — "
+            "only the computed, slightly harder edge quality of the shadow terminator "
+            "reflects the game-engine shader, not its depth or spread. "
+            "The final image is unmistakably a high-poly, next-gen game character "
+            "render — detailed but clearly synthetic, with the visual density of a "
+            "AAA cutscene asset. "
+            "Exposure and image brightness match the reference. "
+            "The background is solid, uniform white (#FFFFFF)."
         )
 
-    # ── Level 3 — Medium (Mid-tier CGI / Uncanny Valley) ────────────────────
-    # CGI evidente e imperfetta. L'effetto "Polar Express": gommoso, vetroso, perturbante.
+    # ─────────────────────────────────────────────────────────────────────
+    # LEVEL: MEDIUM
+    # Fix: restored "The Polar Express (2004)" as sole visual anchor.
+    # Restored explicit "flat diffuse" language.
+    # Added brightness compensation note for flat-diffuse materials.
+    # Removed second film reference (ambiguity source).
+    # ─────────────────────────────────────────────────────────────────────
     if level == "medium":
         return (
-            shared_prompt
-            + "LEVEL: MEDIUM. TARGET EVALUATION: AA3. "
-            + "STYLE: Early 2000s Cinematic CGI (The Polar Express aesthetic / Uncanny Valley). "
-            + "INSTRUCTION: Render a mid-2000s 3D character. "
-            
-            + "The skin must be waxy, resembling a soft silicone mask. "
-            + "The face must be a single, uniform 3D mesh with a simple diffuse texture to define details and imperfections. "
-
-            + "Lighting must be flat and lacks realistic bounce-light, creating a lifeless, 'uncanny' synthetic appearance. "
+            locked_context +
+            "RENDER STYLE — MEDIUM: Cinematic CGI in the exact visual aesthetic of "
+            "The Polar Express (2004) — the definitive reference for this level. "
+            "The skin is rendered as a continuous, slightly-too-smooth 3D mesh surface "
+            "with a flat diffuse albedo: soft, uniform, and waxy like polished candle "
+            "wax — the surface is matte and diffuse, carrying no specular highlights "
+            "and no sub-surface glow. "
+            "Because a flat-diffuse material naturally absorbs more light than a "
+            "photographic surface, the albedo brightness must be boosted so that the "
+            "face reads at the same overall exposure level as the reference photograph. "
+            "Freckles, moles, and skin marks are present as flat, painted-on albedo "
+            "patches with no geometric relief — they sit on the surface like a decal "
+            "rather than rising from it. "
+            "The overall skin reads as one continuous poured surface with no visible "
+            "pore structure or micro-normal variation. "
+            "Lighting follows the locked reference direction; shadow placement and "
+            "intensity match the reference — shadows are soft, low-contrast, and "
+            "slightly too even, with gentle terminator edges characteristic of "
+            "early performance-capture cinema. "
+            "The overall image sits in the uncanny valley: clearly synthetic, "
+            "clearly attempting human realism, clearly not alive. "
+            "Image exposure is bright and correctly matched to the reference. "
+            "The background is solid, uniform white (#FFFFFF)."
         )
 
-    # ── Level 4 — Medium-Low (Proportional 3D Animation) ────────────────────
-    # Shading stile Pixar/Disney, ma con le proporzioni anatomiche di un umano vero.
-    # PERFECT
+    # ─────────────────────────────────────────────────────────────────────
+    # LEVEL: MEDIUM_LOW
+    # ─────────────────────────────────────────────────────────────────────
     if level == "medium_low":
         return (
-            shared_prompt
-            + "ANTHROPOMORPHISM LEVEL: MEDIUM-LOW. "
-            + "STYLE: 2015 Indie Narrative Game Asset (Life is Strange 1 aesthetic). "
-            + "INSTRUCTION: Reconstruct the subject as a stylized, slightly low-poly 3D game character. "
-            
-            + "HAND-PAINTED TEXTURES: Strictly remove all PBR elements (no Normal or Bump maps). "
-            + "All skin, clothing, and details must use 'Hand-Painted Albedo Textures'. "
-            + "Shadows, highlights, and skin tones must appear directly painted onto the 3D model with visible digital brushstrokes. "
-            + "Strictly maintain the original facial characteristics, position, form, proportions, and lighting condition placement from base image. "          
-
-            + "GEOMETRY & HAIR: Simplify facial features into soft, slightly angular 3D geometry. "
-            + "Hair must be rendered as solid, sculptural volumetric blocks with painted directional strokes. "
-            + "Do not render individual hair strands. "
-            + "OVERALL EFFECT: A charming, stylized 3D model characterized by its hand-painted, soft pastel texture work."
+            locked_context +
+            "RENDER STYLE — MEDIUM-LOW: Hand-painted 3D character in the aesthetic of "
+            "Life is Strange (2015) or similar hand-crafted narrative indie games. "
+            "The entire surface is rendered using hand-painted albedo textures with "
+            "no PBR normal maps, no specular maps, and no bump-map detail. "
+            "Shadows, highlights, and skin-tone gradients are visibly brushed onto the "
+            "model surface as directional digital paint strokes — the light appears "
+            "baked into the texture rather than computed in real time. "
+            "Skin marks (freckles, moles) are re-expressed as simplified painted spots "
+            "with soft, hand-drawn edges. "
+            "Facial geometry is simplified into smooth, soft angular planes with "
+            "slightly stylised proportions that retain the subject's recognisable "
+            "identity. "
+            "Hair is a solid sculptural volume divided into chunky painted sections "
+            "with visible directional highlight strokes — no individual strands, "
+            "no alpha cards. "
+            "The colour palette is slightly desaturated and warm, consistent with the "
+            "hand-crafted indie aesthetic. "
+            "Image exposure is correctly matched to the reference. "
+            "The background is solid, uniform white (#FFFFFF)."
         )
 
-    # ── Level 5 — Low (Proportional 2D Cartoon / Illustration) ──────────────
-    # Passaggio al 2D puro, ma senza diventare una caricatura.
-    # PERFECT
-    #+ "LEVEL: LOW. TARGET EVALUATION: Below AA4. "
-    #+ "STYLE: Stylized 2D Painterly Animation (animated series aesthetic). "
-    #+ "INSTRUCTION: Transform the subject into a 2D painterly animated character. "
-    #+ "GEOMETRY & PLANES: Translate the original anatomical identity into sharp, chiseled, and angular facial planes. "
-    #+ "Proportions and expressions remain accurate to base image, but the surface structure is stylized and graphic. "
-    # + "PAINTERLY TEXTURES: Apply rich, textured 2D digital brushstrokes over the 3D forms. "
-    #+ "The skin, hair, and clothing must look like high-end digital concept art or an oil painting brought to life. "
-            
-    #+ "LIGHTING: Keep the same style lighting of base image. "
-    #+ "OVERALL EFFECT: A flat yet dynamically shaded 2D illustration, blending 3D structural volumes with 2D painterly art."
+    # ─────────────────────────────────────────────────────────────────────
+    # LEVEL: LOW
+    # ─────────────────────────────────────────────────────────────────────
     if level == "low":
         return (
-            shared_prompt
-            + "ANTHROPOMORPHISM LEVEL: LOW. "
-            + "STYLE: 2006 Narrative Game Asset (The sims 2 aesthetic). "
-            + "INSTRUCTION: Reconstruct the subject as a stylized, slightly low-poly 3D game character. "
-            + "Strictly maintain the original facial characteristics, position, form, proportions, and lighting condition placement from base image. "          
-
-            + "TEXTURES: Strictly remove all PBR elements (no Normal or Bump maps). "
-     
-            
-            + "GEOMETRY & HAIR: Simplify facial features into soft, slightly angular 3D geometry. "
-            + "Hair must be rendered as solid, sculptural volumetric blocks with painted directional strokes. "
-            + "Do not render individual hair strands. "
+            locked_context +
+            "RENDER STYLE — LOW: A low-poly 3D game character asset in the aesthetic "
+            "of The Sims 2 (2004) or comparable early-2000s consumer PC games. "
+            "The geometry is simplified into clean, rounded 3D volumes with smooth "
+            "Gouraud shading: the silhouette is simplified and slightly boxy, "
+            "while internal facial planes are smoothly interpolated with no visible "
+            "faceting. "
+            "All surfaces use simple, flat albedo textures with baked-in directional "
+            "shading — no PBR, no normal maps, no specular maps. "
+            "Skin is a uniform, low-frequency tone with painted-on shadow areas. "
+            "Freckles and skin marks are simplified into a small number of flat "
+            "painted spots, consistent with the low-texture-budget aesthetic. "
+            "Hair is rendered as a solid, simplified sculptural cap with "
+            "broad painted directional highlights — no individual strands. "
+            "Eyes are simple textured spheres with a flat iris decal. "
+            "The subject's identity and expression remain readable despite the "
+            "computational economy. "
+            "Image exposure is correctly matched to the reference. "
+            "The background is solid, uniform white (#FFFFFF)."
         )
-    raise ValueError(f"Unsupported level: {level}")
 
+    raise ValueError(f"Unsupported level: {level!r}. Valid: high, medium_high, medium, medium_low, low")
  
 # ──────────────────────────────────────────────
 # API CALLS
@@ -569,7 +627,8 @@ def process_one_image(client, model, image_path):
         print(f"Skipping unreadable image: {image_path.name}")
         return
     
-    for level in LEVELS:
+    #use LEVELS_3 to test only the 3 middle levels with style reference images, or LEVELS to use all 5 levels without style reference images
+    for level in LEVELS_3:  # LEVELS #Use LEVELS to use all 5 levels, or LEVELS_3 to use only the 3 middle levels with style reference images
         print(f"Generating [{level}]...")
         prompt = build_prompt(level)
         # Se vogliamo usare uno style transfer da immagini reference

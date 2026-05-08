@@ -39,6 +39,7 @@ def standardize_input_image(image_path, target_resolution):
         - contain(): mantenere l'aspect ratio originale, ma rendendo più piccola l'img se più grande del target (su un asse)
           es. 2444x1718 -> 1080x759 (aspect ratio 3:2) ; 2835x3543 -> 864x1080 (aspect ratio 4:5) ; 1350x1350 -> 1080x1080 (aspect ratio 1:1)
         - cover(): mantenere l'aspect ratio originale, ma rendendo più grande l'img se più piccola del target (su un asse)
+          es. 2444x1718 (requested is 1080x1080) -> 1582x1080 (aspect ratio 3:2) ; 2835x3543 -> 1080x1350 (aspect ratio 4:5) ; 1350x1350 -> 1080x1080 (aspect ratio 1:1)
         - fit(): Se vuoi che l'immagine finale abbia esattamente le dimensioni del target, ma accetti di tagliare parti dell'immagine originale (center-crop).
         """
 

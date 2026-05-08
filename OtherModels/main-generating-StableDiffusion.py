@@ -7,7 +7,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 import io
 from google.genai.types import GenerateContentConfig, Modality
-
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from constants import *
 
 # VERSION 4: PIPELINE WITH REFERENCE STYLE IMAGE
@@ -62,82 +63,13 @@ def scan_input_images(input_dir, max_images):
     if not folder.exists():
         folder.mkdir(parents=True, exist_ok=True)
         return []
-    
-    folder_male = input_dir / "WhiteMale"
-    folder_female = input_dir / "WhiteFemale"
     valid_images = []
-    for sub in (folder_male, folder_female):
-        if not sub.exists():
-            continue
-        for item in sorted(sub.iterdir()):
-            if item.is_file() and item.suffix.lower() in ALLOWED_EXTENSIONS:
-                valid_images.append(item)
-                if len(valid_images) >= max_images:
-                    return valid_images
-    
-    ''''
     for item in sorted(folder.iterdir()):
         if item.is_file() and item.suffix.lower() in ALLOWED_EXTENSIONS:
             valid_images.append(item)
         if len(valid_images) >= max_images:
-            break'''
-    return valid_images
-
-def get_test_input_images(test_input_dir):
-    """
-    Deterministically return the two test images by stem:
-      - CFD-WF-233-112-N  (from FEMALE_INPUT_DIR)
-      - CFD-WM-201-063-N  (from MALE_INPUT_DIR)
-
-    Minimal checks: looks for exact-stem + any allowed extension; falls back
-    to case-insensitive stem scan in the folder if exact filename not found.
-    """
-    #VERSION SEMPLICE CON FOLDER DEDICATO
-    folder = test_input_dir  # Usare Path(test_input_dir) quando test_input_dir è già un Path, non cambia nulla
-    result = []
-    if not folder.exists():
-        folder.mkdir(parents=True, exist_ok=True)
-        return []
-    for item in sorted(folder.iterdir()):
-        if item.is_file() and item.suffix.lower() in ALLOWED_EXTENSIONS:
-            result.append(item)
-        if len(result) >= 2:  # We only need two test images
             break
-
-    # RICERCA IN TUTTO IL DATASET (PER USO FUTURO)
-    '''
-    targets = [
-        ("CFD-WF-233-112-N", FEMALE_INPUT_DIR),
-        ("CFD-WM-201-063-N", MALE_INPUT_DIR),
-    ]
-    results = []
-    for stem, folder in targets:
-        if not folder.exists():
-            print(f"Test folder missing: {folder}")
-            continue
-
-        found = None
-        # try exact filename with allowed extensions
-        for ext in ALLOWED_EXTENSIONS:
-            candidate = folder / f"{stem}{ext}"
-            if candidate.exists():
-                found = candidate
-                break
-
-        # fallback: search for matching stem (case-insensitive)
-        if not found:
-            for item in sorted(folder.iterdir()):
-                if item.is_file() and item.suffix.lower() in ALLOWED_EXTENSIONS and item.stem.lower() == stem.lower():
-                    found = item
-                    break
-
-        if found:
-            results.append(found)
-        else:
-            print(f"Test image not found: {stem} in {folder}")
-    '''
-
-    return result
+    return valid_images
 
 
 # ---------------------------
@@ -170,7 +102,7 @@ def build_prompt(level: str) -> str:
     completely unchanged. The added element should [description of how the
     element should integrate].
     """
-    
+
     # Definiamo la scala AA per il contesto del modello
     aa_scale_context = (
         "CONTEXT: Anthropomorphic Style Appearance (AA) Research. "
@@ -182,80 +114,65 @@ def build_prompt(level: str) -> str:
         "AA4: the rendered virtual influencer has Physical characteristics that resemble a real person but through a synthetic lens."
     )
 
-    minimal_shared_prompt = (
-        "TASK: Digital Asset Reconstruction. "
-        "Transform the provided photograph (base image) into a synthetic-digital rendering. "
-    )
     shared_prompt = (
-        "TASK: Digital Asset Reconstruction. "
+        f"{aa_scale_context}\n"
+        "TASK: High-fidelity Digital Asset Reconstruction. "
         "Transform the provided photograph (Base Image) into a synthetic-digital rendering. "
- 
-        "INPUT: Base image is the geometric identity. Use this for Identity, Geometry, and Composition. "
-        #"2. IMAGE 2 (Style Reference - Optional) is the shader source: Use ONLY as a rendering tool for textures, "
-        #"the absolute source for the rendering engine, texture and shader/light quality. Do NOT adopt the identity of Image 2. "
- 
-        "INSTRUCTION: Treat the subject in base image as a 3D digital mesh. "
+
+        "INPUT: 1. IMAGE 1 (Base) is the geometric identity. Use this for Identity, Geometry, and COMPOSITION. "
+        "2. IMAGE 2 (Style Reference - Optional) is the shader source: Use ONLY as a rendering tool for textures,  "
+        "the absolute source for the rendering engine, texture and shader/light quality. Do NOT adopt the identity of Image 2. "
+        
+        "INSTRUCTION: Treat the subject in IMAGE 1 as a 3D digital mesh. "
         "You MUST re-surface this mesh using a synthetic-digital rendering engine. "
- 
+        
         "IDENTITY ANCHOR: Maintain the exact spatial coordinates of all facial features, anatomical proportions, "
         "asymmetries, and specific skin traits (freckles, scars, blemishes). "
-        "Maintain the exact length, density, and spatial coordinates of all facial and body hair (including hair, haircut, beard, eyebrows, eyelashes, and fine peach fuzz). "
-        "However, re-render the original pixels with digital shaders."
- 
-        "SURFACE PROTOCOL: Re-render every surface (skin, hair, fabric) "
+        "Maintain the exact length, density, and spatial coordinates of all facial and body hair (including hair, beard, eyebrows, eyelashes, and fine peach fuzz). " 
+        "However, do not use the original pixels; re-render them with digital shaders."
+        
+        "SURFACE PROTOCOL: Do not use original pixels. Re-render every surface (skin, hair, fabric) "
         "using digital shaders. The final result must be a synthetic-digital reconstruction."
- 
+        
         "COMPOSITION: "
         "Keep the original pose, lighting directions and angles, shadow placement, environment, background and framing. "
         "Keep the original clothing and accessories, including their exact geometry and spatial arrangement. "
-        "Keep the original accessories or clothing items. "
+        "Do not add or remove any accessories or clothing items. "
+
         "The goal is a consistent aesthetic quality across all 5 digital levels. "
     )
     
     # ── Level 1 — High (Polished Photorealism) ──────────────────────────────
-    #PROMPT BUONO SE VOGLIAMO TOGLIERE BRUFOLI E RENDERE TIPICO AI-GENERATED: 
-    #    + "LEVEL: HIGH. TARGET EVALUATION: AA1. "
-    #    + "STYLE: Midjourney v5 signature look / AI-generated digital art. "
-    #    + "INSTRUCTION: Render the subject with extreme algorithmic smoothness. "
-    #    + "The skin must appear flawlessly airbrushed and digitally perfect, exhibiting a synthetic, denoised plastic quality typical of raw generative AI outputs. "
-    #    + "Lighting should be uniform and clinical, highlighting the artificial perfection of the digital reconstruction."
     if level == "high":
         return (
             shared_prompt
-            + "ANTHROPOMORPHISM LEVEL: HIGH."
-            + "STYLE: 'The AI-Signature Look' / Hyper-detailed CGI. " # PROVA: + "STYLE: Midjourney v5 signature look / AI-generated digital art. "
-            + "INSTRUCTION: Create an unrealistic HDR effect. " # "Apply micro-contrast and extreme clarity to the skin. "
-            + "Increase the 'glassy' reflection of the eyes, mantaining the original color. "
-            + "Apply extreme algorithmic sharpening to all natural edges. "
+            + "LEVEL: HIGH. TARGET EVALUATION: AA1. "
+            + "STYLE: 'The AI-Signature Look' / Hyper-detailed CGI. "
+            + "INSTRUCTION: Create an unrealistic HDR effect. "
+            + "Increase the 'glassy' reflection of the eyes. "
+            + "Apply algorithmic sharpening to all natural edges. "
             + "The edge sharpness must come entirely from the high-resolution digital rendering and edge-contrast, "
             + "typical of raw AI-generated assets. "
-            + "The skin must appear flawlessly airbrushed and digitally perfect, exhibiting a synthetic, denoised plastic quality typical of raw generative AI outputs and " # + "The skin must have a high-specular shine and visible digital pores, looking like a "
-            + "highlighting the artificial perfection of the digital reconstruction and micro-details." # + "perfectly polished Virtual Influencer asset."
+            + "The skin must appear flawlessly airbrushed and digitally perfect, exhibiting a synthetic, denoised plastic quality typical of raw generative AI outputs. "
+            + "Lighting should be uniform and clinical, highlighting the artificial perfection of the digital reconstruction and micro-details."
         )
 
     # ── Level 2 — Medium-High (High-End Video Game) ─────────────────────────
     # Molto realistico, ma la perfezione di texture e luci tradisce la natura CGI.
-    # PROMPT EFFICACE
-    #    + "LEVEL: MEDIUM-HIGH. TARGET EVALUATION: AA2. "
-    #    + "STYLE: High-end 3D Character Game Asset / Real-time Engine Render. "
-    #    + "INSTRUCTION: Render the subject as a solid, playable 3D videogame character model. "
-    #    + "TEXTURE & SHADER: Apply a standardized PBR game shader. The skin must look like a dense, opaque digital material with hard-clamped Subsurface Scattering, revealing its nature as a computational surface. "
-    #    + "HAIR & GROOMING: Render the scalp hair and eyebrows as structured geometric hair-cards. Treat any jawline shading strictly as a flat albedo texture overlay, maintaining the exact original density. "          
-    #    + "EYES: Feature baked viewport reflections and a mathematically precise, digitally-rendered iris. "
-    #    + "OVERALL EFFECT: A sculpted 3D character asset showcasing clean digital surfaces and robust engine-computed shading."
+    # NON FUNZIONA
     if level == "medium_high":
         return (
             shared_prompt
-            + "ANTHROPOMORPHISM LEVEL: MEDIUM-HIGH. "
-            + "STYLE: high-end 3D Character Game Asset (call of duty modern warfare 2019 characters aesthetic). "
+            + "LEVEL: MEDIUM-HIGH. TARGET EVALUATION: AA2. "
+            + "STYLE: high-end 3D Character Game Asset (Resident Evil Remake aesthetic). "
             + "INSTRUCTION: Render a high-end playable videogame 3D character. "
             + "The image must look like a game engine render, rejecting any photographic realism."
         
             + "The skin must look like a synthetic material, artificial and mathematically calculated, with a hard-clamped Subsurface Scattering. "
             + "Hair, eyebrows and facial hair must be rendered as distinct digital strands with engine-calculated highlights. "  
-            + "Strictly maintain the original hair density and placement from base image. "  
-            + "Strictly maintain the original facial characteristics, position, form, proportions, and lighting condition placement from base image. "          
+            + "Strictly maintain the original hair density and placement from base image. "          
             + "Eyes must feature 'baked' reflections and a piercing, digitally-rendered iris, clearly mathematically generated. "
+            
             + "OVERALL EFFECT: A premium sculpted 3D character asset with digital surfaces and a solid, rendered appearance."
         )
 
@@ -280,15 +197,14 @@ def build_prompt(level: str) -> str:
     if level == "medium_low":
         return (
             shared_prompt
-            + "ANTHROPOMORPHISM LEVEL: MEDIUM-LOW. "
+            + "LEVEL: MEDIUM-LOW. TARGET EVALUATION: Below AA3. "
             + "STYLE: 2015 Indie Narrative Game Asset (Life is Strange 1 aesthetic). "
             + "INSTRUCTION: Reconstruct the subject as a stylized, slightly low-poly 3D game character. "
             
             + "HAND-PAINTED TEXTURES: Strictly remove all PBR elements (no Normal or Bump maps). "
             + "All skin, clothing, and details must use 'Hand-Painted Albedo Textures'. "
             + "Shadows, highlights, and skin tones must appear directly painted onto the 3D model with visible digital brushstrokes. "
-            + "Strictly maintain the original facial characteristics, position, form, proportions, and lighting condition placement from base image. "          
-
+            
             + "GEOMETRY & HAIR: Simplify facial features into soft, slightly angular 3D geometry. "
             + "Hair must be rendered as solid, sculptural volumetric blocks with painted directional strokes. "
             + "Do not render individual hair strands. "
@@ -298,30 +214,22 @@ def build_prompt(level: str) -> str:
     # ── Level 5 — Low (Proportional 2D Cartoon / Illustration) ──────────────
     # Passaggio al 2D puro, ma senza diventare una caricatura.
     # PERFECT
-    #+ "LEVEL: LOW. TARGET EVALUATION: Below AA4. "
-    #+ "STYLE: Stylized 2D Painterly Animation (animated series aesthetic). "
-    #+ "INSTRUCTION: Transform the subject into a 2D painterly animated character. "
-    #+ "GEOMETRY & PLANES: Translate the original anatomical identity into sharp, chiseled, and angular facial planes. "
-    #+ "Proportions and expressions remain accurate to base image, but the surface structure is stylized and graphic. "
-    # + "PAINTERLY TEXTURES: Apply rich, textured 2D digital brushstrokes over the 3D forms. "
-    #+ "The skin, hair, and clothing must look like high-end digital concept art or an oil painting brought to life. "
-            
-    #+ "LIGHTING: Keep the same style lighting of base image. "
-    #+ "OVERALL EFFECT: A flat yet dynamically shaded 2D illustration, blending 3D structural volumes with 2D painterly art."
     if level == "low":
         return (
             shared_prompt
-            + "ANTHROPOMORPHISM LEVEL: LOW. "
-            + "STYLE: 2006 Narrative Game Asset (The sims 2 aesthetic). "
-            + "INSTRUCTION: Reconstruct the subject as a stylized, slightly low-poly 3D game character. "
-            + "Strictly maintain the original facial characteristics, position, form, proportions, and lighting condition placement from base image. "          
-
-            + "TEXTURES: Strictly remove all PBR elements (no Normal or Bump maps). "
-     
+            + "LEVEL: LOW. TARGET EVALUATION: Below AA4. "
+            + "STYLE: Stylized 2.5D Painterly Animation (Arcane animated series aesthetic). "
+            + "INSTRUCTION: Transform the subject into a high-end, 2.5D painterly animated character. "
             
-            + "GEOMETRY & HAIR: Simplify facial features into soft, slightly angular 3D geometry. "
-            + "Hair must be rendered as solid, sculptural volumetric blocks with painted directional strokes. "
-            + "Do not render individual hair strands. "
+            + "GEOMETRY & PLANES: Translate the original anatomical identity into sharp, chiseled, and angular facial planes. "
+            + "Proportions remain accurate to IMAGE 1, but the surface structure is highly stylized and graphic. "
+            
+            + "PAINTERLY TEXTURES: Apply rich, textured 2D digital brushstrokes over the 3D forms. "
+            + "The skin, hair, and clothing must look like high-end digital concept art or an oil painting brought to life. "
+            
+            + "LIGHTING: Apply dramatic, graphic-novel style lighting. Use harsh, colorful 'Rim Lights' "
+            + "and bold, cell-shaded shadow blocks to emphasize the angular geometry. "
+            + "OVERALL EFFECT: A flat yet dynamically shaded 2.5D illustration, blending 3D structural volumes with 2D painterly art."
         )
     raise ValueError(f"Unsupported level: {level}")
 
@@ -616,27 +524,13 @@ def process_one_image(client, model, image_path):
 
 def main():
     api_key, model = load_config()
-    client = genai.Client(vertexai= True, api_key=api_key)
-    isTest = True
-
+    client = genai.Client(api_key=api_key)
+ 
     # riempire la lista di paths delle immagini da processare
     image_paths = scan_input_images(INPUT_DIR, MAX_IMAGES)
     if not image_paths:
         print("No valid input images found.")
         return
-    
-    # TESTING
-    if isTest:
-        # TEST: Prendi direttamente due immagini note: WhiteMale/WM-201 e WhiteFemale/WF-233
-        test_image_paths = get_test_input_images(TEST_INPUT_DIR)
-        print(f"Testing with {len(test_image_paths)} images: {[p.name for p in test_image_paths]}")
-        for idx, image_path in enumerate(test_image_paths, start=1):
-            print(f"\n[TEST {idx}/{len(test_image_paths)}] Processing: {image_path.name}")
-            process_one_image(client, model, image_path)
-        print("Pipeline completed.")
-        return
-
-    # FULL RUN
     for idx, image_path in enumerate(image_paths, start=1):
         print(f"\n[{idx}/{len(image_paths)}] Processing: {image_path.name}")
         process_one_image(client, model, image_path)

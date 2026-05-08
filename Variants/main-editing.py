@@ -253,7 +253,7 @@ def process_one_image(client, model, image_path):
 
 def main():
     api_key, model = load_config()
-    client = genai.Client(api_key=api_key)
+    client = genai.Client(vertexai= True ) # api_key=api_key # tolto API perchè autenticazione fatta con gcloud CLI, non serve più la chiave API esplicita
 
     # Scan for input images
     image_paths = scan_input_images(INPUT_DIR, MAX_IMAGES)

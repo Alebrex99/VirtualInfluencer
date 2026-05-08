@@ -170,7 +170,7 @@ def build_prompt(level: str) -> str:
     completely unchanged. The added element should [description of how the
     element should integrate].
     """
-    
+
     # Definiamo la scala AA per il contesto del modello
     aa_scale_context = (
         "CONTEXT: Anthropomorphic Style Appearance (AA) Research. "
@@ -182,24 +182,19 @@ def build_prompt(level: str) -> str:
         "AA4: the rendered virtual influencer has Physical characteristics that resemble a real person but through a synthetic lens."
     )
 
-    minimal_shared_prompt = (
-        "TASK: Digital Asset Reconstruction. "
-        "Transform the provided photograph (base image) into a synthetic-digital rendering. "
-    )
     shared_prompt = (
+        f"{aa_scale_context}\n"
         "TASK: Digital Asset Reconstruction. "
-        "Transform the provided photograph (Base Image) into a synthetic-digital rendering. "
+        "Transform the provided photograph (Base Image) into a synthetic-digital rendering version, according to the specific level. "
  
-        "INPUT: Base image is the geometric identity. Use this for Identity, Geometry, and Composition. "
-        #"2. IMAGE 2 (Style Reference - Optional) is the shader source: Use ONLY as a rendering tool for textures, "
-        #"the absolute source for the rendering engine, texture and shader/light quality. Do NOT adopt the identity of Image 2. "
+        "INPUT: Base Image defines the fixed geometric identity, anatomical proportions, and spatial coordinates. "
  
-        "INSTRUCTION: Treat the subject in base image as a 3D digital mesh. "
-        "You MUST re-surface this mesh using a synthetic-digital rendering engine. "
- 
+        "INSTRUCTION: Treat the subject in the Base Image as a 3D digital mesh geometry. "
+        "Re-surface this mesh using synthetic digital materials matching the specified level. "
+
         "IDENTITY ANCHOR: Maintain the exact spatial coordinates of all facial features, anatomical proportions, "
         "asymmetries, and specific skin traits (freckles, scars, blemishes). "
-        "Maintain the exact length, density, and spatial coordinates of all facial and body hair (including hair, haircut, beard, eyebrows, eyelashes, and fine peach fuzz). "
+        "Maintain the exact length, density, and spatial coordinates of all facial and body hair (including hair, beard, eyebrows, eyelashes, and fine peach fuzz). "
         "However, re-render the original pixels with digital shaders."
  
         "SURFACE PROTOCOL: Re-render every surface (skin, hair, fabric) "
@@ -222,7 +217,7 @@ def build_prompt(level: str) -> str:
     if level == "high":
         return (
             shared_prompt
-            + "ANTHROPOMORPHISM LEVEL: HIGH."
+            + "LEVEL: HIGH. TARGET EVALUATION: AA1. "
             + "STYLE: 'The AI-Signature Look' / Hyper-detailed CGI. " # PROVA: + "STYLE: Midjourney v5 signature look / AI-generated digital art. "
             + "INSTRUCTION: Create an unrealistic HDR effect. " # "Apply micro-contrast and extreme clarity to the skin. "
             + "Increase the 'glassy' reflection of the eyes, mantaining the original color. "
@@ -246,16 +241,16 @@ def build_prompt(level: str) -> str:
     if level == "medium_high":
         return (
             shared_prompt
-            + "ANTHROPOMORPHISM LEVEL: MEDIUM-HIGH. "
-            + "STYLE: high-end 3D Character Game Asset (call of duty modern warfare 2019 characters aesthetic). "
+            + "LEVEL: MEDIUM-HIGH. TARGET EVALUATION: AA2. "
+            + "STYLE: high-end 3D Character Game Asset (Resident Evil Remake aesthetic). "
             + "INSTRUCTION: Render a high-end playable videogame 3D character. "
             + "The image must look like a game engine render, rejecting any photographic realism."
         
             + "The skin must look like a synthetic material, artificial and mathematically calculated, with a hard-clamped Subsurface Scattering. "
             + "Hair, eyebrows and facial hair must be rendered as distinct digital strands with engine-calculated highlights. "  
-            + "Strictly maintain the original hair density and placement from base image. "  
-            + "Strictly maintain the original facial characteristics, position, form, proportions, and lighting condition placement from base image. "          
+            + "Strictly maintain the original hair density and placement from base image. "          
             + "Eyes must feature 'baked' reflections and a piercing, digitally-rendered iris, clearly mathematically generated. "
+            
             + "OVERALL EFFECT: A premium sculpted 3D character asset with digital surfaces and a solid, rendered appearance."
         )
 
@@ -265,13 +260,12 @@ def build_prompt(level: str) -> str:
         return (
             shared_prompt
             + "LEVEL: MEDIUM. TARGET EVALUATION: AA3. "
-            + "STYLE: Early 2000s Cinematic CGI (The Polar Express aesthetic / Uncanny Valley). "
-            + "INSTRUCTION: Render a mid-2000s 3D character. "
-            
-            + "The skin must be waxy, resembling a soft silicone mask. "
-            + "The face must be a single, uniform 3D mesh with a simple diffuse texture to define details and imperfections. "
-
-            + "Lighting must be flat and lacks realistic bounce-light, creating a lifeless, 'uncanny' synthetic appearance. "
+            + "STYLE: 2004 Offline CGI Render. "
+            + "INSTRUCTION: Apply outdated rendering constraints to the fixed geometry of base image. "
+            + "SURFACE: The skin must be a 100% smooth, poreless, and waxy Lambertian surface. "
+            + "Remove all micro-textures, freckles, and skin imperfections. The face must appear as a uniform, rubbery silicone mesh. "
+            + "EYES: Render eyes as reflective glass spheres with flat, high-contrast iris textures and 'dead' reflections. "
+            + "LIGHTING: Use simple direct lighting with sharp, non-calculated shadows, typical of early 2000s animation. "
         )
 
     # ── Level 4 — Medium-Low (Proportional 3D Animation) ────────────────────
@@ -280,15 +274,14 @@ def build_prompt(level: str) -> str:
     if level == "medium_low":
         return (
             shared_prompt
-            + "ANTHROPOMORPHISM LEVEL: MEDIUM-LOW. "
+            + "LEVEL: MEDIUM-LOW. TARGET EVALUATION: Below AA3. "
             + "STYLE: 2015 Indie Narrative Game Asset (Life is Strange 1 aesthetic). "
             + "INSTRUCTION: Reconstruct the subject as a stylized, slightly low-poly 3D game character. "
             
             + "HAND-PAINTED TEXTURES: Strictly remove all PBR elements (no Normal or Bump maps). "
             + "All skin, clothing, and details must use 'Hand-Painted Albedo Textures'. "
             + "Shadows, highlights, and skin tones must appear directly painted onto the 3D model with visible digital brushstrokes. "
-            + "Strictly maintain the original facial characteristics, position, form, proportions, and lighting condition placement from base image. "          
-
+            
             + "GEOMETRY & HAIR: Simplify facial features into soft, slightly angular 3D geometry. "
             + "Hair must be rendered as solid, sculptural volumetric blocks with painted directional strokes. "
             + "Do not render individual hair strands. "
@@ -298,30 +291,22 @@ def build_prompt(level: str) -> str:
     # ── Level 5 — Low (Proportional 2D Cartoon / Illustration) ──────────────
     # Passaggio al 2D puro, ma senza diventare una caricatura.
     # PERFECT
-    #+ "LEVEL: LOW. TARGET EVALUATION: Below AA4. "
-    #+ "STYLE: Stylized 2D Painterly Animation (animated series aesthetic). "
-    #+ "INSTRUCTION: Transform the subject into a 2D painterly animated character. "
-    #+ "GEOMETRY & PLANES: Translate the original anatomical identity into sharp, chiseled, and angular facial planes. "
-    #+ "Proportions and expressions remain accurate to base image, but the surface structure is stylized and graphic. "
-    # + "PAINTERLY TEXTURES: Apply rich, textured 2D digital brushstrokes over the 3D forms. "
-    #+ "The skin, hair, and clothing must look like high-end digital concept art or an oil painting brought to life. "
-            
-    #+ "LIGHTING: Keep the same style lighting of base image. "
-    #+ "OVERALL EFFECT: A flat yet dynamically shaded 2D illustration, blending 3D structural volumes with 2D painterly art."
     if level == "low":
         return (
             shared_prompt
-            + "ANTHROPOMORPHISM LEVEL: LOW. "
-            + "STYLE: 2006 Narrative Game Asset (The sims 2 aesthetic). "
-            + "INSTRUCTION: Reconstruct the subject as a stylized, slightly low-poly 3D game character. "
-            + "Strictly maintain the original facial characteristics, position, form, proportions, and lighting condition placement from base image. "          
-
-            + "TEXTURES: Strictly remove all PBR elements (no Normal or Bump maps). "
-     
+            + "LEVEL: LOW. TARGET EVALUATION: Below AA4. "
+            + "STYLE: Stylized 2.5D Painterly Animation (Arcane animated series aesthetic). "
+            + "INSTRUCTION: Transform the subject into a high-end, 2.5D painterly animated character. "
             
-            + "GEOMETRY & HAIR: Simplify facial features into soft, slightly angular 3D geometry. "
-            + "Hair must be rendered as solid, sculptural volumetric blocks with painted directional strokes. "
-            + "Do not render individual hair strands. "
+            + "GEOMETRY & PLANES: Translate the original anatomical identity into sharp, chiseled, and angular facial planes. "
+            + "Proportions remain accurate to IMAGE 1, but the surface structure is highly stylized and graphic. "
+            
+            + "PAINTERLY TEXTURES: Apply rich, textured 2D digital brushstrokes over the 3D forms. "
+            + "The skin, hair, and clothing must look like high-end digital concept art or an oil painting brought to life. "
+            
+            + "LIGHTING: Apply dramatic, graphic-novel style lighting. Use harsh, colorful 'Rim Lights' "
+            + "and bold, cell-shaded shadow blocks to emphasize the angular geometry. "
+            + "OVERALL EFFECT: A flat yet dynamically shaded 2.5D illustration, blending 3D structural volumes with 2D painterly art."
         )
     raise ValueError(f"Unsupported level: {level}")
 

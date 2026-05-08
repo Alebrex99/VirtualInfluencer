@@ -2,7 +2,11 @@ from pathlib import Path
 
 ROOT_DIR = Path(__file__).parent # VirtualInfluencer project root directory
 #INPUT_DIR = ROOT_DIR / "Images" / "LondonSet" # se usi il LondonSet
-INPUT_DIR = ROOT_DIR / "Images" / "ChicagoFaceDataset" / "WhiteMale" # se usi il Chicago Face Dataset
+INPUT_DIR = ROOT_DIR / "Images" / "ChicagoFaceDataset"  # se usi il Chicago Face Dataset
+MALE_INPUT_DIR = ROOT_DIR / "Images" / "ChicagoFaceDataset" / "WhiteMale"
+FEMALE_INPUT_DIR = ROOT_DIR / "Images" / "ChicagoFaceDataset" / "WhiteFemale"
+TEST_INPUT_DIR = ROOT_DIR / "Images" / "ChicagoFaceDataset" / "MinMaleMaxFemale"
+
 OUTPUT_DIR = ROOT_DIR / "Output_images"
 STYLE_REFERENCE_DIR = ROOT_DIR / "Images" / "StyleRefImages"
 
@@ -18,7 +22,7 @@ DEFAULT_MODEL            = "gemini-2.5-flash-image-preview"
 # Used by build_prompt() and process_one_image() in generate_pipeline.py.
 # Adding or removing a level here automatically propagates through the pipeline.
 LEVELS = ["high", "medium_high", "medium", "medium_low", "low"]
-EDITING_LEVELS = ["level_1", "level_2", "level_3", "level_4", "level_5"]
+LEVELS_3 = ["high", "medium_high", "medium"]  # Subset of levels for v3.1, which performs best at medium anthropomorphism.
 
 
 # IMAGES
