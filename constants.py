@@ -22,7 +22,7 @@ DEFAULT_MODEL            = "gemini-2.5-flash-image-preview"
 # Used by build_prompt() and process_one_image() in generate_pipeline.py.
 # Adding or removing a level here automatically propagates through the pipeline.
 LEVELS = ["high", "medium_high", "medium", "medium_low", "low"]
-LEVELS_3 = ["high", "medium_high", "medium"]  # Subset of levels for v3.1, which performs best at medium anthropomorphism.
+LEVELS_3 = [ "medium_high", "medium"]  # Subset of levels for v3.1, which performs best at medium anthropomorphism.
 
 
 # IMAGES

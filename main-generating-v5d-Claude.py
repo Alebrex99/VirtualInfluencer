@@ -267,7 +267,7 @@ def build_prompt(level: str) -> str:
         return (
             locked_context +
             "RENDER STYLE — MEDIUM-HIGH: A high-poly real-time 3D character asset for "
-            "a AAA game engine, in the visual aesthetic of Uncharted 4 (mantain the original lighting conditions and intensity). "
+            "a AAA game engine, in the visual aesthetic of Uncharted 4 CHARACTERS, but maintaining the lighting exposure and intensity conditions of the original photo. "
             "The skin surface is rendered using a PBR material with a strongly "
             "diffuse-dominant albedo: subsurface scattering is present but clamped, "
             "producing an opaque, dense, slightly waxy appearance that clearly rejects "

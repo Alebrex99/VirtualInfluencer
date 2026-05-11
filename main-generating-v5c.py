@@ -182,7 +182,8 @@ def build_prompt(level: str) -> str:
         "- Pose, head tilt, gaze direction, facial expression.\n"
         "- Camera framing, crop, distance, aspect ratio.\n"
         "- Lighting direction, light angle and shadow placement.\n"
-        "- Background (plain white #FFFFFF) and environment\n"
+        "- Replicate the exact Exposure Value (EV) of the base image\n"
+        "- Background (plain white #FFFFFF) and environment: rendered as the base image background\n"
         "- Clothing geometry, color, and spatial arrangement\n\n"
 
         "VARIABLE: only the SHADING MODEL and SURFACE RENDERING are allowed to change between levels. "
@@ -221,18 +222,25 @@ def build_prompt(level: str) -> str:
         )
 
     # ── MEDIUM-HIGH — AAA real-time game character (CoD MW 2019) ──────────
+    # DA PROVARE SE SI CREANO RISULTATI DIVERSI
+    #"The skin surface is rendered using a PBR material with a strongly "
+    #"diffuse-dominant albedo: subsurface scattering is present but clamped "
+    #"and hard-edged, producing an opaque, dense, slightly waxy appearance "
+    #"that clearly rejects biological photorealism. "
     if level == "medium_high":
         return (
             locked_context +
             "RENDER STYLE — Level MEDIUM-HIGH (AAA Video Game Asset Reconstruction):\n"
-            "Render the subject as a 3D playable character for a real-time engine. (Uncharted 4 CHARACTER aesthetics, but maintaining the lighting/exposure conditions and intensity of the original photo) "
+            "Render the subject as a 3D playable character for a real-time engine "
+            "(Uncharted 4 CHARACTER aesthetics). Replicate the exact Exposure Value (EV) of the base image "
             "SURFACE PROTOCOL: Treat the skin as a 'Synthetic PBR Material'. "
             "The skin is rendered as a opaque 'Matte-Plastic' texture, rejecting biological softness. "
-            "TEXTURE MAPS: Render the surface using evident 'Albedo' and 'Normal Maps'. "
+            "TEXTURE MAPS: Render the surface using evident diffuse-dominant albedo and normal maps. "
             "Details must be rendered as mathematically generated digital noise, not organic skin. "
             "SHADING: Apply a 'Hard-Clamped Subsurface Scattering' effect to create an opaque, "
             "waxy appearance typical of sculpted digital assets. "
-            "HAIR & EYES: Render hair, eyebrows, and any facial hair as thin 'Game-Engine Ribbons' with baked specular highlights. "
+            "HAIR & EYES: Render hair, eyebrows, and any facial hair as geometrically thin high-end Game-Engine Particle Systems: " # thin 'Game-Engine Ribbons' with baked specular highlights. "
+            "distinct, geometrically clean alpha cards with baked specular highlights. "
             "Eyes must have static, pre-rendered reflections. "
             "LIGHTING: Use 'Directional Rim Lighting' to express the 3D topology and volume of the mesh. "
             "The result must be an unmistakable, high-poly real-time game character render."
@@ -240,16 +248,22 @@ def build_prompt(level: str) -> str:
         )
 
     # ── MEDIUM — Mid-2000s cinematic CGI / Uncanny Valley ─────────────────
+    # DA PROVARE SE SI CREANO RISULTATI DIVERSI
+    #"The skin is rendered as a continuous, slightly-too-smooth 3D mesh surface: "
+    #"soft, diffuse, and waxy like polished candle wax or a dense silicone mould — "
+    #"with a flat, uniform diffuse albedo and minimal specular response (the surface "
+    #"does not shine or gleam; it is matte-waxy, not plastic-shiny). "
     if level == "medium":
         return (
             locked_context +
             "RENDER STYLE — Level MEDIUM (Early-2000s Cinematic CGI / Uncanny Valley):\n"
             "Render in the aesthetic of The Polar Express (2004) or early "
-            "performance-capture cinema. Skin is waxy and slightly "
-            "translucent, like a soft silicone mask or polished candle wax. "
+            "performance-capture cinema, but replicate the exact Exposure Value (EV) of the base image. "
+            "Skin is waxy like a soft silicone mask or polished candle wax. "
             "The face is one continuous, slightly-too-smooth 3D mesh with "
             "a flat diffuse texture pass for marks and imperfections — they "
             "read as painted onto the surface rather than emerging from it. "
+            "Render hair, eyebrows, and any facial hair as geometrically thin Old-Game-Engine Particle Systems. " # thin 'Game-Engine Ribbons' with baked specular highlights. "
             "Lighting is flat, lacks realistic bounce-light, and produces "
             "shadows that fall slightly too softly. The result sits in the "
             "uncanny valley: clearly synthetic, clearly attempting realism, "
