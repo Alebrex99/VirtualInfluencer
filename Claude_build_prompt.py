@@ -1,55 +1,3 @@
-"""
-build_prompt() — v5
-Optimized for: gemini-3-pro-image-preview (Nano Banana Pro)
-
-DESIGN RATIONALE (per Google's Gemini 3 prompting guide + image-edit best practices)
-─────────────────────────────────────────────────────────────────────────────
-1. Gemini 3 is a reasoning model. It UNDER-performs on verbose, repetitive
-   prompts written for older diffusion models. v4 repeated "maintain original X"
-   five+ times — Gemini 3 reads that as low-confidence noise. v5 says it once,
-   inside an IDENTITY LOCK block, with hard preservation language.
-
-2. Gemini 3 docs explicitly recommend: "place your specific instructions or
-   questions at the end of the prompt, after the data context." So v5 puts
-   the only thing that changes between levels (RENDER STYLE) at the end,
-   after the locked identity/composition context.
-
-3. Identity-preservation best practice (from Nano Banana / Gemini 3 Pro Image
-   community guides): use an "identity header" + "hard negatives". v5 adds
-   an explicit DO-NOT-ALTER block at the end of every prompt — this is the
-   single biggest reliability gain for face-edit pipelines.
-
-4. The IP-policy framing ("3D digital mesh", "synthetic-digital
-   reconstruction") is preserved — this is what keeps the model from refusing
-   on real-person grounds. v5 strengthens it by leading with "synthetic
-   character asset" rather than "photograph of a subject".
-
-5. v4 had a contradiction at HIGH level: "preserve every freckle/blemish"
-   AND "skin must appear flawlessly airbrushed". v5 resolves: imperfections
-   are RE-RENDERED as hyper-detailed micro-features (sub-surface pores,
-   ultra-sharp algorithmic detail) — never removed. This matches the
-   MetaHuman / hyperreal CGI aesthetic Simone is targeting.
-
-6. v4 told the model to "preserve original lighting condition placement"
-   even at LOW (Sims 2) — physically incompatible with that aesthetic.
-   v5 separates LIGHTING DIRECTION (always preserved — where the key/fill
-   come from) from SHADING MODEL (changes per level — how surfaces respond
-   to that light).
-
-7. Concrete engine references replace vague ones. Gemini 3 has strong
-   real-world grounding, so "Unreal Engine 5 MetaHuman", "IW 8.0 engine
-   (CoD MW 2019)", "Source 1 (Half-Life 2 era)" are read as precise
-   technical specs by the model.
-
-8. Aspect-ratio note: gemini-3-pro-image-preview accepts an
-   `image_config={"aspect_ratio": "..."}` field in GenerateContentConfig.
-   Your pipeline already passes `standardized_input_aspect_ratio` into
-   `generate_with_retry()` — make sure that's wired into the API call,
-   otherwise the model will default to the input image's ratio anyway
-   (which is the desired behavior for this study).
-─────────────────────────────────────────────────────────────────────────────
-"""
-
 # VERSION 1
 
 def build_prompt(level: str) -> str:
@@ -478,6 +426,8 @@ def build_prompt(level: str) -> str:
         )
 
     raise ValueError(f"Unsupported level: {level!r}. Valid values: high, medium_high, medium, medium_low, low")
+
+
 
 
 

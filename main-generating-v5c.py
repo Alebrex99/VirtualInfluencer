@@ -65,19 +65,27 @@ def scan_input_images(input_dir, max_images):
         folder.mkdir(parents=True, exist_ok=True)
         return []
     
-    folder_male = input_dir / "WhiteMale"
-    folder_female = input_dir / "WhiteFemale"
     valid_images = []
-    for sub in (folder_male, folder_female):
-        if not sub.exists():
-            continue
-        for item in sorted(sub.iterdir()):
-            if item.is_file() and item.suffix.lower() in ALLOWED_EXTENSIONS:
-                valid_images.append(item)
-                if len(valid_images) >= max_images:
-                    return valid_images
+    for item in sorted(folder.iterdir()):
+        if item.is_file() and item.suffix.lower() in ALLOWED_EXTENSIONS:
+            valid_images.append(item)
+        if len(valid_images) >= max_images:
+            break
+    return valid_images
+
+    #folder_male = input_dir / "WhiteMale"
+    #folder_female = input_dir / "WhiteFemale"
+    #valid_images = []
+    #for sub in (folder_male, folder_female):
+    #    if not sub.exists():
+    #        continue
+    #    for item in sorted(sub.iterdir()):
+    #        if item.is_file() and item.suffix.lower() in ALLOWED_EXTENSIONS:
+    #            valid_images.append(item)
+    #            if len(valid_images) >= max_images:
+    #                return valid_images
     
-    ''''
+    '''
     for item in sorted(folder.iterdir()):
         if item.is_file() and item.suffix.lower() in ALLOWED_EXTENSIONS:
             valid_images.append(item)
@@ -232,7 +240,7 @@ def build_prompt(level: str) -> str:
             locked_context +
             "RENDER STYLE — Level MEDIUM-HIGH (AAA Video Game Asset Reconstruction):\n"
             "Render the subject as a 3D playable character for a real-time engine "
-            "(Uncharted 4 CHARACTER aesthetics). Replicate the exact Exposure Value (EV) of the base image "
+            "(Uncharted 4 CHARACTERS aesthetics). Replicate the exact Exposure Value (EV) of the base image "
             "SURFACE PROTOCOL: Treat the skin as a 'Synthetic PBR Material'. "
             "The skin is rendered as a opaque 'Matte-Plastic' texture, rejecting biological softness. "
             "TEXTURE MAPS: Render the surface using evident diffuse-dominant albedo and normal maps. "
@@ -311,6 +319,346 @@ def build_prompt(level: str) -> str:
 
     raise ValueError(f"Unsupported level: {level}")
 
+def build_enhanced_prompt(level: str) -> str:
+    # ── IDENTITY + COMPOSITION LOCK (shared across all 5 levels) ──────────
+    # Concise. No repetition. Lives at the top because Gemini 3 anchors
+    # later instructions to earlier context.
+    locked_context = (
+        "ROLE: You are an expert image producer specializing in 3D character "
+        "asset generation.\n"
+        "TASK: Produce a synthetic 3D character asset by re-surfacing a given "
+        "geometric reference (the base image) with a specified target "
+        "rendering style — high, medium-high, medium, medium-low, or low "
+        "anthropomorphism.\n\n"
+        
+        "BASE INPUT IMAGE: The base image is the canonical source of TWO "
+        "things and only the SHADER is allowed to change:\n"
+        "  (a) GEOMETRIC IDENTITY — facial structure, hair, accessories, "
+        "      clothing, pose, framing.\n"
+        "  (b) PHOTOMETRIC BLUEPRINT — light direction, shadow positions and "
+        "      shadow softness, exposure value (EV), white balance, and the "
+        "      pure white background.\n"
+        "The transformation re-renders the SURFACE SHADER on top of this "
+        "blueprint. The shader is the only variable.\n\n"
+
+        "IDENTITY LOCK: The following attributes must be preserved exactly and never altered, only re-rendered through the target shader:\n"
+        "- Facial geometry: every feature's spatial coordinates, proportions, asymmetries, and bone structure.\n"
+        "- Skin character: every freckle, mole, scar, pimple, abrasion, uneven pigmentation – these must be preserved as micro-features in the new shader.\n"
+        "- Hair: exact hairline, parting, length, density, color, eyebrow shape and density, eyelashes, beard/stubble pattern, fine peach fuzz. The original pixels for hair must be re-rendered with digital shaders.\n"
+        "- Accessories: every earring, piercing, hair clip, glasses, necklace, garment item – maintain the same geometry, placement, and color.\n"
+        "- Identity attributes: apparent age, gender, ethnicity, and the subject's inherent facial attractiveness – these must be held constant across all levels.\n"
+
+        "COMPOSITION LOCK: The following aspects must be preserved exactly:\n"
+        "- Pose, head tilt, gaze direction, facial expression.\n"
+        "- Camera framing, crop, distance, aspect ratio.\n"
+        "- Clothing geometry, color, and spatial arrangement.\n\n"
+
+        # [LT-H][LT-M] hardened photometric lock, single source of truth
+        "PHOTOMETRIC LOCK — preserve exactly (no level may override this):\n"
+        "- Light direction and angle: identical to the base image.\n"
+        "- Shadow positions, shapes, edges, and softness: identical to the "
+        "  base image.\n"
+        "- Exposure Value (EV) and overall brightness: identical to the base "
+        "  image — the output histogram should match the input histogram in "
+        "  mid-tone placement and highlight roll-off.\n"
+        "- White balance and color temperature: identical to the base image.\n"
+        "Only the SHADER's *response* to this fixed lighting is allowed to "
+        "change between levels. The lighting rig itself does not move, "
+        "soften, harden, brighten, or darken.\n\n"
+
+        # [BG] single, positive, prominent background directive
+        "BACKGROUND LOCK — uniform pure white #FFFFFF, perfectly flat, "
+        "edge-to-edge, identical to the base image. \n\n"
+
+        "VARIABLE: only the SHADING MODEL and SURFACE RENDERING are allowed to change between levels. "
+        "Light direction is locked; how that light interacts with the skin is dictated by the target style. \n\n"
+
+        "INSTRUCTION: "
+        "1. Treat the subject in the provided base image as a 3D digital mesh. \n"
+        "2. You MUST re-surface this mesh using a synthetic-digital rendering engine.\n"
+        "3. SURFACE PROTOCOL: Re-render every surface (skin, hair, fabric) using digital shaders. The final result must be a synthetic-digital reconstruction.\n"
+
+        "TARGET RENDER STYLE:\n"
+    )
+
+
+    # ── LEVEL-SPECIFIC RENDER STYLE (the ASK, anchored at the end) ────────
+
+    # ── HIGH — Hyperreal CGI / MetaHuman / "AI-signature" look ────────────
+    # Resolves v4 contradiction: imperfections become hyper-detailed
+    # micro-features rendered THROUGH the synthetic shader, not erased.
+    # STABLE VERSION: 
+    '''"RENDER STYLE — Level HIGH (Midjourney-v5 signature / "
+            "AI-generated virtual-influencer asset):\n"
+            "Render as a hyper-detailed virtual-influencer asset in the "
+            "signature look of high-end generative AI portraits. Every pore, "
+            "freckle, mole, and skin imperfection from the base image is "
+            "PRESERVED and RE-RENDERED into ultra-sharp, algorithmically over-traced "
+            "micro-relief - the way raw generative-AI portraits exhibit impossible micro-clarity. "
+            "Skin carries a subtle synthetic sheen on the highlight side, "
+            "with unnaturally even local contrast across mid-tones (local "
+            "contrast only — overall EV unchanged). Eyes are glassy and "
+            "over-specular, irises mathematically circular and over-detailed, "
+            "original eye color preserved exactly. All natural edges — hair "
+            "strands, eyelashes, lip line — are "
+            "algorithmically over-sharpened, mantaining the original color and constraints. The surface reads as 'too "
+            "perfectly detailed to be a photograph': the fingerprint of a "
+            "high-end synthetic asset, not a smoothed beauty retouch."'''
+    if level == "high":
+        return (
+            locked_context +
+            "RENDER STYLE — Level HIGH (Midjourney-v5 signature / "
+            "AI-generated virtual-influencer asset):\n"
+            "Render as a hyper-detailed virtual-influencer asset in the "
+            "signature look of high-end generative AI portraits. Every pore, "
+            "freckle, mole, and skin imperfection from the base image is "
+            "RE-RENDERED into ultra-sharp, algorithmically over-traced "
+            "micro-relief - the way raw generative-AI portraits exhibit impossible micro-clarity. "
+            "Skin carries a synthetic sheen on the highlight side, "
+            "with unnaturally even local contrast across mid-tones and a noticeable plasticity. "
+            "Eyes are glassy and over-specular, irises mathematically circular and over-detailed, "
+            "original eye color preserved. All natural edges — hair "
+            "strands, eyelashes, lip line — are "
+            "algorithmically over-sharpened, detailed and shiny, preserving the original constraints. The surface reads as 'too "
+            "perfectly detailed to be a photograph': the fingerprint of a "
+            "high-end synthetic asset."
+            #+ hard_negatives
+        )
+
+    # ── MEDIUM-HIGH — AAA real-time game character (CoD MW 2019) ──────────
+    # DA PROVARE SE SI CREANO RISULTATI DIVERSI
+    #"The skin surface is rendered using a PBR material with a strongly "
+    #"diffuse-dominant albedo: subsurface scattering is present but clamped "
+    #"and hard-edged, producing an opaque, dense, slightly waxy appearance "
+    #"that clearly rejects biological photorealism. "
+    if level == "medium_high":
+        return (
+            locked_context +
+            "RENDER STYLE — Level MEDIUM-HIGH (AAA Video Game Asset Reconstruction):\n"
+            "Render the subject as a 3D playable character for a real-time engine (skin aesthetics of Uncharted 4 characters). "
+            "Replicate the exact Exposure Value (EV) of the base image. "
+            "SURFACE PROTOCOL: Treat the skin as a 'Synthetic PBR Material'. "
+            "The skin is rendered as a opaque 'Matte-Plastic' texture, rejecting biological softness. "
+            "TEXTURE MAPS: Render the surface using evident diffuse-dominant albedo and normal maps. "
+            "Details must be rendered as mathematically generated digital noise, not organic skin. "
+            "SHADING: Apply a 'Hard-Clamped Subsurface Scattering' effect to create an opaque, "
+            "waxy appearance typical of sculpted digital assets. "
+            "HAIR & EYES: Render hair, eyebrows, and any facial hair as geometrically thin high-end Game-Engine Particle Systems: " # thin 'Game-Engine Ribbons' with baked specular highlights. "
+            "distinct, geometrically clean alpha cards with baked specular highlights. "
+            "Eyes must have static, pre-rendered reflections. "
+            "LIGHTING: Use 'Directional Rim Lighting' to express the 3D topology and volume of the mesh. "
+            "The result must be an unmistakable, high-poly real-time game character render."
+            #+ hard_negatives
+        )
+
+    # ── MEDIUM — Mid-2000s cinematic CGI / Uncanny Valley ─────────────────
+    # DA PROVARE SE SI CREANO RISULTATI DIVERSI
+    #"The skin is rendered as a continuous, slightly-too-smooth 3D mesh surface: "
+    #"soft, diffuse, and waxy like polished candle wax or a dense silicone mould — "
+    #"with a flat, uniform diffuse albedo and minimal specular response (the surface "
+    #"does not shine or gleam; it is matte-waxy, not plastic-shiny). "
+    if level == "medium":
+        return (
+            locked_context +
+            "RENDER STYLE — Level MEDIUM (Early-2000s Cinematic CGI / Uncanny Valley):\n"
+            "Render in the aesthetic of The Polar Express (2004) or early "
+            "performance-capture cinema, but replicate the exact Exposure Value (EV) of the base image. "
+            "Skin is waxy like a soft silicone mask or polished candle wax. "
+            "The face is one continuous, slightly-too-smooth 3D mesh with "
+            "a flat diffuse texture pass for marks and imperfections — they "
+            "read as painted onto the surface rather than emerging from it. "
+            "Render hair, eyebrows, and any facial hair as geometrically thin Old-Game-Engine Particle Systems. " # thin 'Game-Engine Ribbons' with baked specular highlights. "
+            "Lighting is flat, lacks realistic bounce-light, and produces "
+            "shadows that fall slightly too softly. The result sits in the "
+            "uncanny valley: clearly synthetic, clearly attempting realism, "
+            "clearly not alive."
+            #+ hard_negatives
+        )
+
+    # ── MEDIUM-LOW — Hand-painted indie 3D (Life is Strange 1) ────────────
+    if level == "medium_low":
+        return (
+            locked_context +
+            "RENDER STYLE — Level MEDIUM-LOW (Hand-Painted Indie 3D):\n"
+            "Render in the aesthetic of Life is Strange (2015) or similar "
+            "hand-painted indie 3D narrative games. STRICTLY NO PBR — no "
+            "normal maps, no bump maps, no specular maps. All surfaces use "
+            "hand-painted albedo textures: shadows, highlights, skin tones, "
+            "and fabric details are visibly brushed onto the model with "
+            "directional digital strokes. Facial geometry is simplified into "
+            "soft, slightly angular planes. Hair is rendered as solid "
+            "sculptural volumes — chunked, painted, with directional "
+            "highlight strokes — never as individual strands. The palette "
+            "is soft and slightly desaturated."
+            #+ hard_negatives
+        )
+
+    # ── LOW — Early-2000s low-poly (The Sims 2) ───────────────────────────
+    if level == "low":
+        return (
+            locked_context +
+            "RENDER STYLE — Level LOW (Early-2000s Low-Poly Game Asset):\n"
+            "Render in the aesthetic of The Sims 2 (2004) or comparable "
+            "early-2000s low-poly 3D characters. Geometry is simplified into clean 3D volumes. "
+            "Apply 'Smooth Shading' to the mesh: while the silhouette remains simplified "
+            "and slightly angular, the internal facial planes must be smooth and rounded, "
+            "with no visible faceted edges. STRICTLY NO PBR — "
+            "all surfaces use simple flat albedo textures with baked-in "
+            "shading. Skin is a single uniform tone with painted-on "
+            "shadows. Hair is a solid sculptural cap of simplified geometry "
+            "with painted directional strokes — no individual strands."
+            "Eyes are simple textured spheres. Expression and identity "
+            "are still readable, but rendered with the unmistakable "
+            "computational economy of mid-2000s consumer-PC 3D graphics."
+            #+ hard_negatives
+        )
+
+    raise ValueError(f"Unsupported level: {level}")
+
+# MEDIUM HIGH NON FUNZIONA -> IDENTICO A ORIGINAL
+def build_gemini_style_prompt(level: str) -> str:
+    """
+    Gemini-3-native build_prompt(level).
+    Drop-in for main-generating-v5c.py — same signature, same return type.
+    """
+
+    # ── STYLE BLOCK (the ASK) — Subject + Style first ─────────────────────
+    style_blocks = {
+        "high": (
+            "STYLE — HIGH anthropomorphism (AI-signature virtual-influencer):\n"
+            "A hyper-detailed virtual-influencer portrait in the signature "
+            "look of high-end generative-AI imagery (Midjourney-v5 / "
+            "MetaHuman). The skin is high-resolution synthetic: every pore "
+            "from the base photograph is rendered as algorithmically "
+            "over-traced micro-relief, freckles and moles have sub-pixel "
+            "crisp edges, fine peach fuzz is etched with impossible "
+            "micro-clarity. The highlight side of the face carries a subtle "
+            "synthetic sheen; mid-tones show unnaturally even local contrast "
+            "(local micro-contrast only — overall exposure is unchanged). "
+            "Eyes are glassy and over-specular with mathematically circular "
+            "irises in the subject's original eye color. Hair strands, "
+            "eyelashes, lip contour, and garment seams are "
+            "algorithmically over-sharpened. The overall texture reads as "
+            "'too perfectly detailed to be a real photograph' — the "
+            "fingerprint of a high-end synthetic asset, not a smoothed "
+            "beauty retouch."
+        ),
+        "medium_high": (
+            "STYLE — MEDIUM-HIGH anthropomorphism (AAA real-time game "
+            "character, Uncharted 4):\n"
+            "A 3D playable character for a real-time engine in the look of "
+            "Uncharted 4 character assets. Skin is a dense, matte, "
+            "synthetic PBR shader: diffuse-dominant albedo with "
+            "hard-clamped subsurface scattering. The surface is opaque and "
+            "matte — never plastic-shiny, never waxy. Pores, freckles, and "
+            "every micro-imperfection from the base photograph are baked "
+            "into the normal map and the diffuse pass as crisp, "
+            "mathematically clean micro-detail. Hair, eyebrows, and any "
+            "facial hair are rendered as high-end game-engine particle "
+            "systems: distinct, geometrically clean alpha cards with baked "
+            "specular highlights. Eyes have static, pre-rendered "
+            "reflections. The overall image is unmistakably a high-poly "
+            "real-time game character render."
+        ),
+        "medium": (
+            "STYLE — MEDIUM anthropomorphism (Early-2000s Cinematic CGI / Uncanny Valley):"
+            "Render in the aesthetic of The Polar Express (2004) or early "
+            "performance-capture cinema, but replicate the exact Exposure Value (EV) of the base image. "
+            "Skin is waxy like a soft silicone mask or polished candle wax. "
+            "The face is one continuous, slightly-too-smooth 3D mesh with "
+            "a flat diffuse texture pass for marks and imperfections — they "
+            "read as painted onto the surface rather than emerging from it. "
+            "Render hair, eyebrows, and any facial hair as geometrically thin Old-Game-Engine Particle Systems. " # thin 'Game-Engine Ribbons' with baked specular highlights. "
+            "Lighting is flat, lacks realistic bounce-light, and produces "
+            "shadows that fall slightly too softly. The result sits in the "
+            "uncanny valley: clearly synthetic, clearly attempting realism, "
+            "clearly not alive."
+        ),
+        "medium_low": (
+            "STYLE — MEDIUM-LOW anthropomorphism (hand-painted indie 3D, "
+            "Life is Strange 2015):\n"
+            "All surfaces are hand-painted albedo textures (strictly no "
+            "PBR, no normal maps, no specular maps). Shadows, highlights, "
+            "skin tones, and fabric details are visibly brushed onto the "
+            "model with directional digital strokes. Facial geometry is "
+            "simplified into soft, slightly angular planes. Hair is solid "
+            "sculptural volumes — chunked, painted, directional highlight "
+            "strokes, never individual strands. Palette is soft and "
+            "slightly desaturated."
+        ),
+        "low": (
+            "STYLE — LOW anthropomorphism (early-2000s low-poly game "
+            "asset, The Sims 2 2004):\n"
+            "Geometry is simplified into clean 3D volumes with smooth "
+            "shading (slightly angular silhouette, smooth rounded internal "
+            "planes, no faceted edges). Strictly no PBR — flat albedo "
+            "textures with baked-in shading. Skin is a single uniform tone "
+            "with painted-on shadows. Hair is a solid sculptural cap with "
+            "painted directional strokes, no individual strands. Eyes are "
+            "simple textured spheres. Expression and identity remain "
+            "readable."
+        ),
+    }
+
+    if level not in style_blocks:
+        raise ValueError(f"Unsupported level: {level}")
+
+    # ── PROMPT (Gemini-3-native order: subject → style → context → locks) ──
+    return (
+        # 1. Subject + the role of the reference image
+        "Re-render the subject of the attached photograph as a synthetic 3D "
+        "character asset. The attached image is BOTH the geometric "
+        "reference (identity, pose, framing, clothing, accessories) AND the "
+        "photometric reference (light direction, shadow positions and "
+        "softness, exposure, white balance, and the pure white "
+        "background).\n\n"
+
+        # 2. The style block (the actual ask)
+        + style_blocks[level] + "\n\n"
+
+        # 3. What the transformation IS and is not (positively framed)
+        "TRANSFORMATION SCOPE: only the SURFACE SHADER changes. The shader "
+        "is the single variable. The lighting rig stays where it is, the "
+        "exposure stays where it is, the background stays where it is, and "
+        "every facial landmark from the photograph stays where it is — all "
+        "of these are re-rendered THROUGH the target shader, never "
+        "replaced by it.\n\n"
+
+        # 4. Cinematographic preservation language for the photometric blueprint
+        "LIGHTING TO PRESERVE (cinematographic terms): the base image is a "
+        "frontal studio portrait lit by a soft frontal key with a balanced "
+        "fill, on a seamless pure-white #FFFFFF cyclorama. The key/fill "
+        "ratio, the shadow direction (look at where the shadow under the "
+        "nose and the chin sits in the base image — that exact placement, "
+        "shape, and softness must reappear in the output), and the overall "
+        "exposure value are reproduced one-to-one. The shader changes how "
+        "this lighting reads on the surface, but the lighting itself does "
+        "not move, brighten, darken, soften, harden, or warm up.\n\n"
+
+        # 5. Hard locks at the END (Gemini 3 weights this position highest)
+        "ABSOLUTE OUTPUT CONSTRAINTS (highest priority):\n"
+        "- BACKGROUND: pure white #FFFFFF, perfectly flat and uniform, "
+        "edge-to-edge, identical to the base image. A solid white "
+        "cyclorama. No gradient, no vignette, no gray cast, no tint, no "
+        "shadow spill.\n"
+        "- EXPOSURE: identical Exposure Value to the base image. The output "
+        "histogram matches the input histogram in mid-tone placement and "
+        "highlight roll-off.\n"
+        "- LIGHTING & SHADOWS: identical light direction, identical shadow "
+        "positions, identical shadow softness. The shader changes; the "
+        "lighting rig does not.\n"
+        "- IDENTITY: every freckle, mole, pore distribution, asymmetry, "
+        "hair strand pattern, eyebrow shape, accessory (hair clip, "
+        "earrings, garment), and the t-shirt geometry are present in the "
+        "output, restyled into the target shader.\n"
+        "- AGE, GENDER, ETHNICITY, and the subject's inherent facial "
+        "attractiveness are held constant across all anthropomorphism "
+        "levels.\n"
+        "- ASPECT RATIO and crop match the base image exactly.\n"
+        "These constraints override any stylistic interpretation of the "
+        "STYLE block above if a conflict appears."
+    )
+
 
  
 # ──────────────────────────────────────────────
@@ -384,7 +732,7 @@ def generate_with_retry(client, model, image_path, prompt, aspect_ratio, style_r
         except Exception as error:
             last_error = error
             if attempt < MAX_RETRIES:
-                delay = RETRY_BASE_DELAY_SECONDS * (2 ** (attempt - 1))
+                delay = RETRY_BASE_DELAY_SECONDS * (2 ** (attempt - 1)) # es. input = 1.5, 3, 6, 12
                 print(f"Retry {attempt}/{MAX_RETRIES} failed for {image_path.name}. Waiting {delay:.1f}s...")
                 time.sleep(delay)
 
@@ -559,7 +907,9 @@ def process_one_image(client, model, image_path):
     #use LEVELS_3 to test only the 3 middle levels with style reference images, or LEVELS to use all 5 levels without style reference images
     for level in LEVELS_3:  # LEVELS #Use LEVELS to use all 5 levels, or LEVELS_3 to use only the 3 middle levels with style reference images
         print(f"Generating [{level}]...")
-        prompt = build_prompt(level)
+        #prompt = build_prompt(level)
+        prompt = build_enhanced_prompt(level)
+        #prompt = build_gemini_style_prompt(level)
         # Se vogliamo usare uno style transfer da immagini reference
         style_reference_image = get_style_reference_image(level)  # Ottieni l'immagine di riferimento per lo stile specifico del livello
         
@@ -573,7 +923,6 @@ def process_one_image(client, model, image_path):
  
         try:
             if style_reference_image is None:
-                print(f"No style reference image for level [{level}]. Proceeding without it.")
                 generated = generate_with_retry(client, model, standardized_image_path, prompt, standardized_input_aspect_ratio)  # Devo ritornare una PIL Image da questa funzione
             else:
                 print(f"Using style reference image for level [{level}]: {style_reference_image}")
@@ -605,15 +954,15 @@ def process_one_image(client, model, image_path):
 def main():
     api_key, model = load_config()
     client = genai.Client(vertexai= True, api_key=api_key)
-    isTest = True
+    isTest = False
 
     # riempire la lista di paths delle immagini da processare
-    image_paths = scan_input_images(INPUT_DIR, MAX_IMAGES)
+    image_paths = scan_input_images(EXPERIMENT_INPUT_DIR, MAX_IMAGES)
     if not image_paths:
         print("No valid input images found.")
         return
     
-    # TESTING
+    # ---------------------TESTING------------------------
     if isTest:
         # TEST: Prendi direttamente due immagini note: WhiteMale/WM-201 e WhiteFemale/WF-233
         test_image_paths = get_test_input_images(TEST_INPUT_DIR)
@@ -624,7 +973,7 @@ def main():
         print("Pipeline completed.")
         return
 
-    # FULL RUN
+    # --------------------FULL RUN------------------------
     for idx, image_path in enumerate(image_paths, start=1):
         print(f"\n[{idx}/{len(image_paths)}] Processing: {image_path.name}")
         process_one_image(client, model, image_path)

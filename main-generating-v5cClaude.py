@@ -142,30 +142,6 @@ def get_test_input_images(test_input_dir):
     return result
 
 
-"""
-build_prompt_v6.1
-─────────────────────────────────────────────────────────────────────────────
-Changes vs v6.0
-  SHARED locked_context:
-    • Exposure/shadow anchor strengthened: now explicitly prohibits deepening,
-      expanding, or intensifying shadow coverage beyond the reference.
-      (Fixes the over-dark face + heavy shadow problem on all levels.)
-
-  MEDIUM_HIGH:
-    • Removed "shadows are hard-edged and computed, not naturally diffused" —
-      this was the direct cause of the heavy rim-shadow on jaw/neck.
-    • Replaced with: shadow intensity and spread must match the reference;
-      only the edge quality (computed vs. organically diffused) may differ.
-
-  MEDIUM:
-    • Restored "The Polar Express (2004)" as the sole, strong visual anchor.
-      (Multiple anchors in v6.0 created ambiguity → wrong aesthetic.)
-    • Restored explicit "flat diffuse" language.
-    • Added a level-specific brightness lock: flat-diffuse materials naturally
-      read darker — the model must compensate to match reference exposure.
-    • Removed "Final Fantasy: The Spirits Within" second reference.
-─────────────────────────────────────────────────────────────────────────────
-"""
 
 
 def build_prompt(level: str) -> str:

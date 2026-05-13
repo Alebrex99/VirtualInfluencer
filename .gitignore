@@ -25,3 +25,7 @@ __pycache__/
 Images/
 .venv/
 
+#Togliere tutto per CLAUDE
+CLAUDE.*
+.claude/
+
