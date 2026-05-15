@@ -201,6 +201,62 @@ ENHANCED_MEDIUM_PROMPT2 = (
     "clearly not alive."
 )
 
+
+ENHANCED_MEDIUM_PROMPT = (
+    "Using the attached image as the exact source, re-shade this synthetic "
+    "character asset into the Level MEDIUM rendering style: mid-2000s cinematic CGI "
+    "in the exact visual aesthetic of The Polar Express (2004) — the definitive "
+    "reference for this style.\n\n"
+
+    "SURFACE SHADER: Skin is waxy like a soft silicone mask or polished candle wax. "
+    "The face is one continuous, slightly-too-smooth 3D mesh with "
+    "a flat diffuse texture pass for marks and imperfections — they "
+    "read as painted onto the surface rather than emerging from it. "
+    "Render hair, eyebrows, and any facial hair as geometrically thin Old-Game-Engine Particle Systems. " # thin 'Game-Engine Ribbons' with baked specular highlights. "
+    "Lighting is flat, lacks realistic bounce-light, and produces "
+    "shadows that fall slightly too softly. The result sits in the "
+    "uncanny valley: clearly synthetic, clearly attempting realism, "
+    "clearly not alive."
+
+    "PRESERVE FROM SOURCE (keep exactly as in the attached image): the subject's "
+    "identity and all facial features — facial geometry, proportions, jawline, "
+    "cheekbones, nose, eyes, eyebrows, and lips; apparent age, gender, and "
+    "ethnicity; "
+    "hairline, parting, length, density, and hair color; all accessories and clothing "
+    "in their exact spatial coordinates and colors; head pose, head tilt, gaze "
+    "direction, neutral closed-mouth expression; camera framing, crop, distance, "
+    "and aspect ratio.\n\n"
+
+    "PHOTOMETRIC LOCK (overrides all shader instructions): the light direction, "
+    "shadow positions, shadow softness, exposure value, and white balance of the "
+    "attached image are reproduced exactly. Shadow intensity, coverage, and spread "
+    "remain within the bounds visible in the source. The background is a uniform "
+    "pure white (#FFFFFF), perfectly flat and edge-to-edge, identical to the source."
+)
+
+# USED --------------------------------------------------
+ENHANCEMENT_PROMPT = (
+    "Using the attached image as the exact source, generate a hyper-beautified version of the same person — "
+    "an idealized representation that pushes beauty optimization to a level beyond what is typically achievable in ordinary men, "
+    "comparable to top-tier male AI virtual influencers and to the aesthetic logic of hyper-optimized male synthetic models. "
+    "The result must remain credible and avoid any uncanny-valley, plastic, doll-like, mannequin, or grotesque appearance. "
+    "Beauty optimization (Western male beauty canon): maximize facial symmetry; sharpen and define the jawline into a strong, "
+    "angular, well-defined shape with a clean mandibular line and a defined gonial angle; refine the chin with subtle prominence and a balanced projection; "
+    "elevate and define cheekbones with clean, masculine hollows; straighten and refine the nose with a well-proportioned bridge and a clean, defined tip "
+    "(no delicate or upturned tip); subtly emphasize a refined brow ridge consistent with masculine sexual dimorphism; brighten the eyes with crisp iris definition, "
+    "clear whites, and an alert, confident gaze (no lash emphasis, no enlargement); shape the eyebrows into a clean, well-groomed, "
+    "naturally masculine line — fuller, straighter, not over-arched; define the lips with clear, balanced contours and a well-formed shape — "
+    "proportionate to the face, not enlarged and without an exaggerated cupid's bow; clear, healthy skin with even tone, natural radiance, and a subtle, "
+    "credible male skin texture (not waxy, not over-smoothed, retaining a believable level of micro-texture); preserve any existing facial hair (stubble, beard, mustache) " 
+    "exactly as in the source but groom it to appear cleaner, denser where present, and more defined in its outline; idealize overall facial proportions following the canonical Western standard of male attractiveness "
+    "(averageness + masculine sexual dimorphism cues — pronounced jaw, chin, cheekbones, refined brow — and a slightly higher facial width-to-height ratio, all applied with restraint to stay believable). "
+    "Strict preservation (do NOT change): identity must remain clearly recognizable as the same individual; head pose, gaze direction, framing, crop, background, "
+    "lighting setup, clothing, hairstyle, hair color, hair length, facial hair style and length must be identical to the source; critically, preserve the exact same rendering style and "
+    "level of photorealism/anthropomorphism as the source image — if the source looks photorealistic, the output must look photorealistic; if the source has a stylized/CGI/synthetic rendering, "
+    "the output must keep that exact same stylized/CGI/synthetic rendering. Do not shift the rendering style in either direction."
+    "Negative constraints: no plastic or waxy skin, no doll-like or mannequin appearance, no feminized features (no soft V-shape jawline, no enlarged eyes, no exaggerated or visible lashes, "
+    "no fuller-than-natural lips, no over-arched or thinned brows, no neotenous proportions), no facial distortion, no change of ethnicity, no change of age range, no different person, no removal or addition of facial hair relative to the source."
+    "Output: a hyper-optimized but credible \"more handsome version of the same person in the same photo, in the same rendering style.\"")
 #USATO PRIMA
 ENHANCED_MEDIUM_PROMPT1 = (
     "Using the attached image as the exact source, re-shade this already-synthetic "
@@ -229,7 +285,7 @@ ENHANCED_MEDIUM_PROMPT1 = (
     "proportions, jawline, cheekbones, nose, eyes, eyebrows, and lips remain "
     "exactly as in the source; apparent age, gender, and ethnicity; the subject's "
     "current level of facial attractiveness (do not reduce or further enhance it); "
-    "hairline, parting, length, density, color; all accessories and clothing in "
+    "preserve the hairline, parting, length, density, and hair color; all accessories and clothing in "
     "their exact spatial coordinates and colors; head pose, head tilt, gaze "
     "direction, neutral closed-mouth expression; camera framing, crop, distance, "
     "and aspect ratio.\n\n"
@@ -240,62 +296,6 @@ ENHANCED_MEDIUM_PROMPT1 = (
     "spread must not exceed what is visible in the source — do not deepen, expand, "
     "or intensify shadows. The background is a uniform, pure white (#FFFFFF), "
     "perfectly flat and edge-to-edge, identical to the source."
-)
-
-
-# USED --------------------------------------------------
-ENHANCEMENT_PROMPT = (
-    "Using the attached image as the exact source, generate a hyper-beautified version of the same person — "
-    "an idealized representation that pushes beauty optimization to a level beyond what is typically achievable in ordinary men, "
-    "comparable to top-tier male AI virtual influencers and to the aesthetic logic of hyper-optimized male synthetic models. "
-    "The result must remain credible and avoid any uncanny-valley, plastic, doll-like, mannequin, or grotesque appearance. "
-    "Beauty optimization (Western male beauty canon): maximize facial symmetry; sharpen and define the jawline into a strong, "
-    "angular, well-defined shape with a clean mandibular line and a defined gonial angle; refine the chin with subtle prominence and a balanced projection; "
-    "elevate and define cheekbones with clean, masculine hollows; straighten and refine the nose with a well-proportioned bridge and a clean, defined tip "
-    "(no delicate or upturned tip); subtly emphasize a refined brow ridge consistent with masculine sexual dimorphism; brighten the eyes with crisp iris definition, "
-    "clear whites, and an alert, confident gaze (no lash emphasis, no enlargement); shape the eyebrows into a clean, well-groomed, "
-    "naturally masculine line — fuller, straighter, not over-arched; define the lips with clear, balanced contours and a well-formed shape — "
-    "proportionate to the face, not enlarged and without an exaggerated cupid's bow; clear, healthy skin with even tone, natural radiance, and a subtle, "
-    "credible male skin texture (not waxy, not over-smoothed, retaining a believable level of micro-texture); preserve any existing facial hair (stubble, beard, mustache) " 
-    "exactly as in the source but groom it to appear cleaner, denser where present, and more defined in its outline; idealize overall facial proportions following the canonical Western standard of male attractiveness "
-    "(averageness + masculine sexual dimorphism cues — pronounced jaw, chin, cheekbones, refined brow — and a slightly higher facial width-to-height ratio, all applied with restraint to stay believable). "
-    "Strict preservation (do NOT change): identity must remain clearly recognizable as the same individual; head pose, gaze direction, framing, crop, background, "
-    "lighting setup, clothing, hairstyle, hair color, hair length, facial hair style and length must be identical to the source; critically, preserve the exact same rendering style and "
-    "level of photorealism/anthropomorphism as the source image — if the source looks photorealistic, the output must look photorealistic; if the source has a stylized/CGI/synthetic rendering, "
-    "the output must keep that exact same stylized/CGI/synthetic rendering. Do not shift the rendering style in either direction."
-    "Negative constraints: no plastic or waxy skin, no doll-like or mannequin appearance, no feminized features (no soft V-shape jawline, no enlarged eyes, no exaggerated or visible lashes, "
-    "no fuller-than-natural lips, no over-arched or thinned brows, no neotenous proportions), no facial distortion, no change of ethnicity, no change of age range, no different person, no removal or addition of facial hair relative to the source."
-    "Output: a hyper-optimized but credible \"more handsome version of the same person in the same photo, in the same rendering style.\"")
-ENHANCED_MEDIUM_PROMPT = (
-    "Using the attached image as the exact source, re-shade this synthetic "
-    "character asset into the Level MEDIUM rendering style: mid-2000s cinematic CGI "
-    "in the exact visual aesthetic of The Polar Express (2004) — the definitive "
-    "reference for this style.\n\n"
-
-    "SURFACE SHADER: Skin is waxy like a soft silicone mask or polished candle wax. "
-    "The face is one continuous, slightly-too-smooth 3D mesh with "
-    "a flat diffuse texture pass for marks and imperfections — they "
-    "read as painted onto the surface rather than emerging from it. "
-    "Render hair, eyebrows, and any facial hair as geometrically thin Old-Game-Engine Particle Systems. " # thin 'Game-Engine Ribbons' with baked specular highlights. "
-    "Lighting is flat, lacks realistic bounce-light, and produces "
-    "shadows that fall slightly too softly. The result sits in the "
-    "uncanny valley: clearly synthetic, clearly attempting realism, "
-    "clearly not alive."
-
-    "PRESERVE FROM SOURCE (keep exactly as in the attached image): the subject's "
-    "identity and all facial features — facial geometry, proportions, jawline, "
-    "cheekbones, nose, eyes, eyebrows, and lips; apparent age, gender, and "
-    "ethnicity; "
-    "hairline, parting, length, density, and color; all accessories and clothing "
-    "in their exact spatial coordinates and colors; head pose, head tilt, gaze "
-    "direction, neutral closed-mouth expression; camera framing, crop, distance, "
-    "and aspect ratio.\n\n"
-
-    "PHOTOMETRIC LOCK (overrides all shader instructions): the light direction, "
-    "shadow positions, shadow softness, exposure value, and white balance of the "
-    "attached image are reproduced exactly. Shadow intensity, coverage, and spread "
-    "remain within the bounds visible in the source. The background is a uniform "
-    "pure white (#FFFFFF), perfectly flat and edge-to-edge, identical to the source."
 )
 
 
@@ -599,7 +599,7 @@ def process_medium_style(client, model, image_path):
     print(f"Mediumizing [{enhanced_image_path.name}]...")
     try:
         generated = generate_with_retry(
-            client, model, standardized_enhanced_image_path, ENHANCED_MEDIUM_PROMPT, standardized_input_aspect_ratio
+            client, model, standardized_enhanced_image_path, ENHANCED_MEDIUM_PROMPT1, standardized_input_aspect_ratio
         )
         print(f"Image Generated features: size= {generated.size}, aspect_ratio= {generated.size[0]/generated.size[1]:.2f}")
 

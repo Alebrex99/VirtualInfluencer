@@ -183,6 +183,37 @@ ENHANCED_MEDIUM_PROMPT2 = (
     "clearly not alive."
 )
 
+ENHANCED_MEDIUM_PROMPT = (
+    "Using the attached image as the exact source, re-shade this synthetic "
+    "character asset into the Level MEDIUM rendering style: mid-2000s cinematic CGI "
+    "in the exact visual aesthetic of The Polar Express (2004) — the definitive "
+    "reference for this style.\n\n"
+
+    "SURFACE SHADER: Skin is waxy like a soft silicone mask or polished candle wax. "
+    "The face is one continuous, slightly-too-smooth 3D mesh with "
+    "a flat diffuse texture pass for marks and imperfections — they "
+    "read as painted onto the surface rather than emerging from it. "
+    "Render hair, eyebrows, and any facial hair as geometrically thin Old-Game-Engine Particle Systems. " # thin 'Game-Engine Ribbons' with baked specular highlights. "
+    "Lighting is flat, lacks realistic bounce-light, and produces "
+    "shadows that fall slightly too softly. The result sits in the "
+    "uncanny valley: clearly synthetic, clearly attempting realism, "
+    "clearly not alive."
+
+    "PRESERVE FROM SOURCE (keep exactly as in the attached image): the subject's "
+    "identity and all facial features — facial geometry, proportions, jawline, "
+    "cheekbones, nose, eyes, eyebrows, and lips; apparent age, gender, and "
+    "ethnicity; "
+    "hairline, parting, length, density, and hair color; all accessories and clothing "
+    "in their exact spatial coordinates and colors; head pose, head tilt, gaze "
+    "direction, neutral closed-mouth expression; camera framing, crop, distance, "
+    "and aspect ratio.\n\n"
+
+    "PHOTOMETRIC LOCK (overrides all shader instructions): the light direction, "
+    "shadow positions, shadow softness, exposure value, and white balance of the "
+    "attached image are reproduced exactly. Shadow intensity, coverage, and spread "
+    "remain within the bounds visible in the source. The background is a uniform "
+    "pure white (#FFFFFF), perfectly flat and edge-to-edge, identical to the source."
+)
 
 # USED --------------------------------------------------
 ENHANCEMENT_PROMPT = (
@@ -208,36 +239,45 @@ ENHANCEMENT_PROMPT = (
     "no over-smoothed wax texture, no facial distortion, no change of ethnicity, no change of age range, no different person.\n\n"
     "Output: a hyper-optimized but credible 'more beautiful version of the same person in the same photo, in the same rendering style'."
 )
-ENHANCED_MEDIUM_PROMPT = (
-    "Using the attached image as the exact source, re-shade this synthetic "
+#USATO PRIMA
+ENHANCED_MEDIUM_PROMPT1 = (
+    "Using the attached image as the exact source, re-shade this already-synthetic "
     "character asset into the Level MEDIUM rendering style: mid-2000s cinematic CGI "
     "in the exact visual aesthetic of The Polar Express (2004) — the definitive "
     "reference for this style.\n\n"
 
-    "SURFACE SHADER: Skin is waxy like a soft silicone mask or polished candle wax. "
-    "The face is one continuous, slightly-too-smooth 3D mesh with "
-    "a flat diffuse texture pass for marks and imperfections — they "
-    "read as painted onto the surface rather than emerging from it. "
-    "Render hair, eyebrows, and any facial hair as geometrically thin Old-Game-Engine Particle Systems. " # thin 'Game-Engine Ribbons' with baked specular highlights. "
-    "Lighting is flat, lacks realistic bounce-light, and produces "
-    "shadows that fall slightly too softly. The result sits in the "
-    "uncanny valley: clearly synthetic, clearly attempting realism, "
-    "clearly not alive."
+    "SHADER TRANSITION: the source is a higher-fidelity synthetic render of the "
+    "subject. Lower its surface realism to the Polar Express level. The skin is "
+    "rendered as a continuous, slightly-too-smooth 3D mesh surface with a flat "
+    "diffuse albedo: soft, uniform, and waxy like polished candle wax — the surface "
+    "is matte and diffuse, carrying no specular highlights and no sub-surface glow. "
+    "Because a flat-diffuse material naturally absorbs more light than the source "
+    "render, the albedo brightness must be boosted so that the face reads at the "
+    "same overall exposure level as the attached image. "
+    "Any skin marks present in the source are re-expressed as flat painted decals "
+    "with no geometric relief. The overall skin reads as one continuous poured "
+    "surface with no visible pore structure or micro-normal variation. "
+    "Render hair, eyebrows, and any facial hair as geometrically thin "
+    "Old-Game-Engine Particle Systems. "
+    "The overall result sits in the uncanny valley: clearly synthetic, clearly "
+    "attempting human realism, clearly not alive.\n\n"
 
-    "PRESERVE FROM SOURCE (keep exactly as in the attached image): the subject's "
-    "identity and all facial features — facial geometry, proportions, jawline, "
-    "cheekbones, nose, eyes, eyebrows, and lips; apparent age, gender, and "
-    "ethnicity; "
-    "hairline, parting, length, density, and color; all accessories and clothing "
-    "in their exact spatial coordinates and colors; head pose, head tilt, gaze "
+    "PRESERVE FROM SOURCE (do not alter): the subject's identity and the enhanced "
+    "facial features as they appear in the attached image — facial geometry, "
+    "proportions, jawline, cheekbones, nose, eyes, eyebrows, and lips remain "
+    "exactly as in the source; apparent age, gender, and ethnicity; the subject's "
+    "current level of facial attractiveness (do not reduce or further enhance it); "
+    "preserve the hairline, parting, length, density, and hair color; all accessories and clothing in "
+    "their exact spatial coordinates and colors; head pose, head tilt, gaze "
     "direction, neutral closed-mouth expression; camera framing, crop, distance, "
     "and aspect ratio.\n\n"
 
-    "PHOTOMETRIC LOCK (overrides all shader instructions): the light direction, "
+    "PHOTOMETRIC LOCK (override all shader instructions): the light direction, "
     "shadow positions, shadow softness, exposure value, and white balance of the "
-    "attached image are reproduced exactly. Shadow intensity, coverage, and spread "
-    "remain within the bounds visible in the source. The background is a uniform "
-    "pure white (#FFFFFF), perfectly flat and edge-to-edge, identical to the source."
+    "attached image must be reproduced exactly. Shadow intensity, coverage, and "
+    "spread must not exceed what is visible in the source — do not deepen, expand, "
+    "or intensify shadows. The background is a uniform, pure white (#FFFFFF), "
+    "perfectly flat and edge-to-edge, identical to the source."
 )
 
 
@@ -541,7 +581,7 @@ def process_medium_style(client, model, image_path):
     print(f"Mediumizing [{enhanced_image_path.name}]...")
     try:
         generated = generate_with_retry(
-            client, model, standardized_enhanced_image_path, ENHANCED_MEDIUM_PROMPT, standardized_input_aspect_ratio
+            client, model, standardized_enhanced_image_path, ENHANCED_MEDIUM_PROMPT1, standardized_input_aspect_ratio
         )
         print(f"Image Generated features: size= {generated.size}, aspect_ratio= {generated.size[0]/generated.size[1]:.2f}")
 
