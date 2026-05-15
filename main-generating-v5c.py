@@ -824,7 +824,9 @@ def standardize_input_image(image_path, target_resolution):
             input_aspect_ratio = get_supported_aspect_ratio(source_image.width, source_image.height)
             return (image_path, input_size, input_aspect_ratio)
         
-        expected_standardized_path = STANDARDIZED_IMAGES_DIR / f"{image_path.stem}_{target_resolution[0]}x{target_resolution[1]}.png"
+        #expected_standardized_path = STANDARDIZED_IMAGES_DIR / f"{image_path.stem}_{target_resolution[0]}x{target_resolution[1]}.png"
+        expected_standardized_path = STANDARDIZED_IMAGES_DIR / f"{image_path.stem}.png"
+
         if expected_standardized_path.exists():
             return (expected_standardized_path, target_resolution, get_supported_aspect_ratio(target_resolution[0], target_resolution[1]))
 
@@ -835,7 +837,8 @@ def standardize_input_image(image_path, target_resolution):
             centering=(0.5, 0.5),
         )
         STANDARDIZED_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
-        standardized_image_path = STANDARDIZED_IMAGES_DIR / f"{image_path.stem}_{target_resolution[0]}x{target_resolution[1]}.png"
+        # standardized_image_path = STANDARDIZED_IMAGES_DIR / f"{image_path.stem}_{target_resolution[0]}x{target_resolution[1]}.png"
+        standardized_image_path = STANDARDIZED_IMAGES_DIR / f"{image_path.stem}.png"
         standardized.save(standardized_image_path, format="PNG", optimize=False)
         return (
             standardized_image_path,
@@ -866,12 +869,12 @@ def get_supported_aspect_ratio(width: int, height: int) -> str:
 def save_image(output_dir, source_path, level, image):
     """
     Save *image* to *output_dir* using the naming scheme:
-        <original_stem>_<level>.png
+        <stem>_<SIGLE>.png
     Creates the directory if missing. Returns the output Path.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    out_path = output_dir / f"{source_path.stem}_{level}.png"
+    out_path = output_dir / f"{source_path.stem}_{LEVELS_3_SIGLE.get(level, level)}.png"
     image.save(out_path, format="PNG")
     return out_path
 
@@ -916,7 +919,7 @@ def process_one_image(client, model, image_path):
         # Dato il livello corrente, prima di generare un'immagine e spendere soldi,
         # 1. verifica che l'immagine associata a quel livello non esista già (potrebbe essere stata generata in un run precedente)
         # 2. se esiste già, skip al prossimo livello senza chiamare l'API, altrimenti procedi con la generazione
-        expected_out_path = OUTPUT_DIR / f"{image_path.stem}_{level}.png"  # image_path.stem = nome del file senza estensione, es. "001_03" per "001_03.jpg"
+        expected_out_path = OUTPUT_DIR / f"{image_path.stem}_{LEVELS_3_SIGLE.get(level, level)}.png"  # image_path.stem = nome del file senza estensione, es. "001_03" per "001_03.jpg"
         if expected_out_path.exists():
             print(f"Output already exists for level [{level}]: {expected_out_path}. Skipping generation.")
             continue
@@ -954,7 +957,7 @@ def process_one_image(client, model, image_path):
 def main():
     api_key, model = load_config()
     client = genai.Client(vertexai= True, api_key=api_key)
-    isTest = False
+    isTest = True
 
     # riempire la lista di paths delle immagini da processare
     image_paths = scan_input_images(EXPERIMENT_INPUT_DIR, MAX_IMAGES)

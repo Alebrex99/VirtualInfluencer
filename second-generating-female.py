@@ -267,7 +267,7 @@ def scan_enhancement_input_images(input_dir):
         folder.mkdir(parents=True, exist_ok=True)
         return []
 
-    target_suffixes = {f"_{lvl}" for lvl in ENHANCED_LEVELS}
+    target_suffixes = {f"_{lvl}" for lvl in ENHANCED_LEVELS_SIGLE.values()} #ENHANCED_LEVELS
     valid_images = []
     for item in sorted(folder.iterdir()):
         if not item.is_file() or item.suffix.lower() not in ALLOWED_EXTENSIONS:
@@ -488,7 +488,8 @@ def process_image_enhancement(client, model, image_path):
         return
 
 
-    expected_out_path = OUTPUT_ENHANCED_DIR / f"{image_path.stem}_enhanced.png"
+    #expected_out_path = OUTPUT_ENHANCED_DIR / f"{image_path.stem}_enhanced.png"
+    expected_out_path = OUTPUT_ENHANCED_DIR / f"{image_path.stem}E.png"
     if expected_out_path.exists():
         print(f"Output already exists: {expected_out_path}. Skipping.")
         return
@@ -520,17 +521,19 @@ def process_medium_style(client, model, image_path):
     output: ...high_enhanced_medium.png
     Apply the MEDIUM-level style prompt to the enhanced image and save as {stem}_enhanced_medium.png."""
 
-    enhanced_image_path = OUTPUT_ENHANCED_DIR / f"{image_path.stem}_enhanced.png"
+    #enhanced_image_path = OUTPUT_ENHANCED_DIR / f"{image_path.stem}_enhanced.png"
+    enhanced_image_path = OUTPUT_ENHANCED_DIR / f"{image_path.stem}E.png" # prendi es. _HE and _MHE
     try:
-        standardized_image_path, standardized_input_size, standardized_input_aspect_ratio = standardize_input_image(
+        standardized_enhanced_image_path, standardized_input_size, standardized_input_aspect_ratio = standardize_input_image(
             enhanced_image_path,
             None,  # preserve original resolution
         )
     except (UnidentifiedImageError, OSError):
         print(f"Skipping unreadable image: {enhanced_image_path.name}")
         return
-    
-    expected_out_path = OUTPUT_ENHANCED_DIR / f"{image_path.stem}_enhanced_medium.png"
+
+    #expected_out_path = OUTPUT_ENHANCED_DIR / f"{image_path.stem}_enhanced_medium.png"
+    expected_out_path = OUTPUT_ENHANCED_DIR / f"{image_path.stem}EM.png"
     if expected_out_path.exists():
         print(f"Output already exists: {expected_out_path}. Skipping.")
         return
@@ -538,7 +541,7 @@ def process_medium_style(client, model, image_path):
     print(f"Mediumizing [{enhanced_image_path.name}]...")
     try:
         generated = generate_with_retry(
-            client, model, standardized_image_path, ENHANCED_MEDIUM_PROMPT, standardized_input_aspect_ratio
+            client, model, standardized_enhanced_image_path, ENHANCED_MEDIUM_PROMPT, standardized_input_aspect_ratio
         )
         print(f"Image Generated features: size= {generated.size}, aspect_ratio= {generated.size[0]/generated.size[1]:.2f}")
 

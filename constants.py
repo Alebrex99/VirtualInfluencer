@@ -21,7 +21,7 @@ DEFAULT_MODEL            = "gemini-2.5-flash-image-preview"
 
 LEVELS = ["high", "medium_high", "medium", "medium_low", "low"]
 LEVELS_3 = ["high", "medium_high", "medium"]  # Subset of levels for v3.1, which performs best at medium anthropomorphism.
-
+LEVELS_3_SIGLE = { "high": "H", "medium_high": "MH", "medium": "M"} # S = standard
 
 # IMAGES
 # Exact pixel sizes Gemini 3 Pro Image Preview returns at 1K for each aspect-ratio label.
@@ -79,6 +79,7 @@ STANDARDIZED_IMAGES_DIR = ROOT_DIR / "Images" / "StandardizedImages" # da usare 
 
 # SECOND-GENERATING.PY
 ENHANCED_LEVELS = ["high", "medium_high"]  # second-pipeline filter — only enhance these
+ENHANCED_LEVELS_SIGLE = { "high": "H", "medium_high": "MH" }
 INPUT_ENHANCED_MALE_DIR = ROOT_DIR / "Output_images" / "ReadyToEnhance" / "Male"
 INPUT_ENHANCED_FEMALE_DIR = ROOT_DIR / "Output_images" / "ReadyToEnhance" / "Female"
 OUTPUT_ENHANCED_DIR = ROOT_DIR / "Output_images" / "Enhanced"
