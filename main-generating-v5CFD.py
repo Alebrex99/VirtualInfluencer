@@ -957,7 +957,7 @@ def process_one_image(client, model, image_path):
 def main():
     api_key, model = load_config()
     client = genai.Client(vertexai= True, api_key=api_key)
-    isTest = True
+    isTest = False
 
     # riempire la lista di paths delle immagini da processare
     image_paths = scan_input_images(EXPERIMENT_INPUT_DIR, MAX_IMAGES)

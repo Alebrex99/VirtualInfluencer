@@ -1,17 +1,26 @@
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).parent # VirtualInfluencer project root directory
-INPUT_DIR = ROOT_DIR / "Images" / "ChicagoFaceDataset"  # se usi il Chicago Face Dataset
-MALE_INPUT_DIR = ROOT_DIR / "Images" / "ChicagoFaceDataset" / "WhiteMale"
-FEMALE_INPUT_DIR = ROOT_DIR / "Images" / "ChicagoFaceDataset" / "WhiteFemale"
-TEST_INPUT_DIR = ROOT_DIR / "Images" / "ChicagoFaceDataset" / "MinMaleMaxFemale"
 
-EXPERIMENT_INPUT_DIR = ROOT_DIR / "Images" / "ChicagoFaceDataset" / "ExperimentalDataset"
+# MAIN-GENERATING.PY
 
+#LONDON FACE DATASET:
+INPUT_DIR = ROOT_DIR / "Images" / "LondonDataset"
+TEST_INPUT_DIR = ROOT_DIR / "Images" / "LondonDataset" / "MinMaleMaxFemale"
+EXPERIMENT_INPUT_DIR = ROOT_DIR / "Images" / "LondonDataset" / "ExperimentalDataset"
+
+#CHICAGO FACE DATASET:
+#INPUT_DIR = ROOT_DIR / "Images" / "ChicagoFaceDataset"  # se usi il Chicago Face Dataset
+#MALE_INPUT_DIR = ROOT_DIR / "Images" / "ChicagoFaceDataset" / "WhiteMale"
+#FEMALE_INPUT_DIR = ROOT_DIR / "Images" / "ChicagoFaceDataset" / "WhiteFemale"
+#TEST_INPUT_DIR = ROOT_DIR / "Images" / "ChicagoFaceDataset" / "MinMaleMaxFemale"
+#EXPERIMENT_INPUT_DIR = ROOT_DIR / "Images" / "ChicagoFaceDataset" / "ExperimentalDataset"
+
+#TUTTI I DATASET
 OUTPUT_DIR = ROOT_DIR / "Output_images"
 STYLE_REFERENCE_DIR = ROOT_DIR / "Images" / "StyleRefImages"
 
-MAX_IMAGES = 16
+MAX_IMAGES = 16 # le immagini totali = 16
 MAX_RETRIES = 3
 RETRY_BASE_DELAY = 5          # seconds; doubles on each subsequent attempt
 ALLOWED_EXTENSIONS = {".png", ".jpeg", ".jpg"}
@@ -66,13 +75,15 @@ def compute_gemini_1k_for_input(width: int, height: int) -> tuple[int, int]:
     input_ratio = width / height
     _, (gw, gh) = min(
         GEMINI_1K_OUTPUTS.items(),
-        key=lambda kv: abs(kv[1][0] / kv[1][1] - input_ratio),
+        key=lambda kv: abs(kv[1][0] / kv[1][1] - input_ratio), # min -> prende tuple mappa -> cerca il minimo in base alla distanza con il rapporto in input
     )
     return (gw, gh)
 
 # For cropping to Gemini's nearest real 1K AR output
 # INPUT_RESOLUTION = compute_crop_for_input(2444, 1718)  # CFD 2444x1718 → (2444, 1640), matches Gemini 3:2 = 1264x848
-INPUT_RESOLUTION = compute_gemini_1k_for_input(2444, 1718)  # CFD 2444x1718 → (1264, 848), Gemini 3:2 1K-native
+INPUT_RESOLUTION = compute_gemini_1k_for_input(1350, 1350)  
+# London 1350x1350 → (1024, 1024), Gemini 1:1 1K-native
+# CFD 2444x1718 → (1264, 848), Gemini 3:2 1K-native
 # If you want 1K target output (the cleanest path) -> Set INPUT_RESOLUTION directly to Gemini's pixel pair. For CFD (closest AR = 3:2): INPUT_RESOLUTION = (1264, 848)
 STANDARDIZED_IMAGES_DIR = ROOT_DIR / "Images" / "StandardizedImages" # da usare solo con v3.1
 
