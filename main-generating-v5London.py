@@ -283,7 +283,8 @@ def generate_with_retry(client, model, image_path, prompt, aspect_ratio, style_r
                     config=GenerateContentConfig(
                         response_modalities=[Modality.TEXT, Modality.IMAGE],
                         image_config= types.ImageConfig(
-                            aspect_ratio=aspect_ratio
+                            aspect_ratio=aspect_ratio,
+                            image_size = "2K"
                         ))
                 )
             
